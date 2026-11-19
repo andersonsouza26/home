@@ -331,7 +331,8 @@ $("main").addEventListener("click", e => {
 function openApp(a){
   if(!a.url) return toast("Esta automação ainda não tem tela configurada.");
   if(a.status!=="on") return toast(`"${a.nome}" está ${STATUS[a.status].toLowerCase()}.`);
-  window.location.href = a.url;
+  const w = window.open(a.url, '_blank', 'noopener');
+  if(!w) toast("Libere pop-ups para abrir a tela em nova guia.");
 }
 
 async function runFlow(a){
