@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal de Automações</title>
+<style>
+  /* Paleta inspirada no shadcn/ui (zinc) — preto e branco minimalista */
+  :root {
+    --bg:#ffffff; --surface:#ffffff; --surface2:#f4f4f5; --text:#09090b; --muted:#71717a;
+    --border:#e4e4e7; --ring:#a1a1aa; --shadow:0 1px 2px rgba(0,0,0,.05);
+    --primary:#18181b; --primary-fg:#fafafa;   /* ação principal */
+    --success:#16a34a;   /* executar (positivo) */
+    --warning:#d97706;   /* editar (atenção) */
+    --danger:#dc2626;    /* excluir (perigo) */
+    --neutral:#71717a;   /* secundário */
+    --radius:8px; --sidebar-w:240px;
+  }
+  [data-theme="dark"] {
+    --bg:#09090b; --surface:#09090b; --surface2:#18181b; --text:#fafafa; --muted:#a1a1aa;
+    --border:#27272a; --ring:#52525b; --shadow:none;
+    --primary:#fafafa; --primary-fg:#18181b;
+    --success:#22c55e; --warning:#f59e0b; --danger:#ef4444; --neutral:#a1a1aa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .25s,color .25s}
+  svg{width:20px;height:20px;flex-shrink:0}
+  button{font:inherit;cursor:pointer}
+
+  /* ===== Sidebar ===== */
+  .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:30;transition:transform .25s}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;padding:18px 18px 14px}
+  .logo{width:32px;height:32px;border-radius:var(--radius);background:var(--primary);color:var(--primary-fg);display:grid;place-items:center}
+  .menu{list-style:none;padding:8px 10px;flex:1;overflow-y:auto}
+  .menu-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:12px 10px 6px}
+  .menu button{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:transparent;color:var(--muted);border-radius:var(--radius);text-align:left;font-size:.9rem}
+  .menu button:hover{background:var(--surface2);color:var(--text)}
+  .menu button.active{background:var(--surface2);color:var(--text);font-weight:600}
+  .menu .count{margin-left:auto;font-size:.75rem;background:var(--surface2);padding:1px 8px;border-radius:999px}
+  .side-foot{padding:14px;border-top:1px solid var(--border)}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:25}
+
+  /* ===== Conteúdo ===== */
+  .content{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .topbar h1{font-size:1.2rem;margin-right:auto;display:flex;align-items:center;gap:10px}
+  
+  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:16px 22px 0;align-items:center}
+  .input,select{padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;outline:none}
+  .input:focus,select:focus{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 25%,transparent)}
+  .search{flex:1;min-width:180px}
+  main{padding:16px 22px 30px;flex:1}
+
+  /* ===== Botões ===== */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:var(--radius);border:1px solid transparent;font-weight:500;font-size:.875rem;transition:opacity .15s,transform .1s}
+  .btn:hover{opacity:.9} .btn:active{transform:scale(.97)}
+  .btn svg{width:18px;height:18px}
+  .btn-primary{background:var(--primary);color:var(--primary-fg)}
+  .btn-success{background:var(--success);color:#fff}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--text)}
+  .btn-ghost:hover{background:var(--surface2);opacity:1}
+  .icon-btn{width:34px;height:34px;padding:0;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);display:inline-grid;place-items:center}
+  .icon-btn svg{width:17px;height:17px}
+  .icon-btn.open{color:var(--text)} .icon-btn.run{color:var(--success)}
+  .icon-btn.edit{color:var(--warning)} .icon-btn.del{color:var(--danger)}
+  .icon-btn:hover{background:var(--surface2)}
+  .topbar .menu-toggle{display:none}
+  .icon-btn:disabled{opacity:.35;cursor:not-allowed}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .seg button{border:0;background:var(--surface);color:var(--muted);padding:9px 11px;display:grid;place-items:center}
+  .seg button.active{background:var(--surface2);color:var(--text)}
+
+  /* ===== Cards ===== */
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;position:relative;cursor:pointer;transition:border-color .15s}
+  .card:hover{border-color:var(--ring)}
+  .app-icon{width:48px;height:48px;border-radius:var(--radius);display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 30%,transparent)}
+  .app-icon svg{width:28px;height:28px}
+  .card h3{font-size:1rem} .card p{font-size:.85rem;color:var(--muted);line-height:1.4}
+  .card .badge{position:absolute;top:14px;right:14px}
+  .card-actions{display:flex;gap:6px;margin-top:auto;padding-top:6px}
+
+  .badge{font-size:.72rem;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .badge{border:1px solid var(--border);background:transparent!important}
+  .badge.on{background:color-mix(in srgb,var(--success) 16%,transparent);color:var(--success)}
+  .badge.dev{background:color-mix(in srgb,var(--warning) 16%,transparent);color:var(--warning)}
+  .badge.off{background:color-mix(in srgb,var(--neutral) 18%,transparent);color:var(--neutral)}
+
+  /* ===== Tabela ===== */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);font-size:.9rem}
+  th{background:transparent;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface2)}
+  .name-cell{display:flex;align-items:center;gap:10px;font-weight:600}
+  .name-cell .app-icon{width:34px;height:34px;border-radius:var(--radius)}
+  .name-cell .app-icon svg{width:18px;height:18px}
+  .actions{display:flex;gap:6px;justify-content:flex-end}
+  .empty{color:var(--muted);text-align:center;padding:40px 0}
+
+  /* ===== Dialog ===== */
+  dialog{border:0;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:min(480px,94vw);padding:0;box-shadow:0 20px 50px rgba(0,0,0,.3);margin:auto}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  .dlg-head{padding:18px 20px;border-bottom:1px solid var(--border);font-weight:700;display:flex;align-items:center;gap:10px}
+  .dlg-body{padding:18px 20px;display:grid;gap:12px}
+  .dlg-body label{display:grid;gap:5px;font-size:.82rem;color:var(--muted)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .dlg-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+  .icon-pick{display:flex;flex-wrap:wrap;gap:6px}
+  .icon-pick button{width:38px;height:38px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);display:grid;place-items:center}
+  .icon-pick button.sel{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+  .danger-box{background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);color:var(--danger);padding:12px;border-radius:var(--radius);font-size:.88rem}
+  .hint{font-size:.78rem;color:var(--muted)}
+
+  /* ===== Toast ===== */
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:var(--radius);font-size:.9rem;transition:transform .25s;z-index:60;max-width:90vw}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+
+  /* ===== Responsivo ===== */
+  @media (max-width:900px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:none}
+    .overlay.show{display:block}
+    .content{margin-left:0}
+    .topbar .menu-toggle{display:inline-grid}
+    .col-cat,.col-desc{display:none}
+  }
+  @media (max-width:560px){
+    .topbar,.filters,main{padding-left:14px;padding-right:14px}
+    .btn-label{display:none}
+    .grid{grid-template-columns:repeat(2,1fr);gap:12px}
+    .card{padding:14px;align-items:center;text-align:center}
+    .card p{display:none}
+    .card .badge{top:8px;right:8px}
+    .card-actions{justify-content:center}
+    .col-status{display:none}
+    th,td{padding:10px}
+    .row2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar: categorias (ícone + menu) -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="width:18px;height:18px"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div>Automações</div>
+  <ul class="menu" id="menu"></ul>
+  <div class="side-foot">
+    <button class="btn btn-ghost" id="themeBtn" style="width:100%"><span id="themeIcon"></span><span id="themeLabel"></span></button>
+  </div>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<div class="content">
+  <!-- Cabeçalho com ação principal -->
+  <header class="topbar">
+    <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <h1 id="pageTitle">Todas</h1>
+    <button class="btn btn-primary" id="newBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="btn-label">Nova automação</span></button>
+  </header>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <input class="input search" id="search" type="search" placeholder="Buscar automação...">
+    <select id="statusFilter">
+      <option value="">Todos os status</option>
+      <option value="on">Ativo</option>
+      <option value="dev">Em breve</option>
+      <option value="off">Inativo</option>
+    </select>
+    <div class="seg" id="viewSeg">
+      <button data-view="grid" class="active" title="Cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+      <button data-view="table" title="Tabela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+    </div>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<!-- Dialog: criar / editar -->
+<dialog id="editDlg">
+  <form method="dialog" id="editForm">
+    <div class="dlg-head" id="editTitle">Editar automação</div>
+    <div class="dlg-body">
+      <label>Nome<input class="input" name="nome" required maxlength="40"></label>
+      <label>Descrição<input class="input" name="desc" maxlength="90"></label>
+      <div class="row2">
+        <label>Categoria<input class="input" name="cat" list="catList" required></label>
+        <label>Status
+          <select name="status"><option value="on">Ativo</option><option value="dev">Em breve</option><option value="off">Inativo</option></select>
+        </label>
+      </div>
+      <label>URL da tela<input class="input" name="url" placeholder="relatorios.html ou https://..."></label>
+      <label>Webhook Power Automate (opcional)<input class="input" name="webhook" placeholder="https://...logic.azure.com/..."></label>
+      <label>Cor do ícone<input class="input" type="color" name="cor" style="height:42px;padding:4px"></label>
+      <label>Ícone<div class="icon-pick" id="iconPick"></div></label>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
+      <button type="submit" class="btn btn-success" value="save">Salvar</button>
+    </div>
+  </form>
+  <datalist id="catList"></datalist>
+</dialog>
+
+<!-- Dialog: exclusão (2 confirmações) -->
+<dialog id="delDlg">
+  <div class="dlg-head" style="color:var(--danger)">Excluir automação</div>
+  <div class="dlg-body" id="delBody"></div>
+  <div class="dlg-foot">
+    <button class="btn btn-ghost" data-close>Cancelar</button>
+    <button class="btn btn-danger" id="delConfirm">Continuar</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== DADOS =====================
+// url: tela a abrir • webhook: URL do gatilho HTTP do Power Automate (opcional)
+let APPS = [
+  { nome:"Relatórios",       desc:"Geração automática de relatórios em PDF/Excel.", cat:"Dados",         cor:"#2f6fed", icon:"chart",    url:"relatorios.html",  webhook:"", status:"on"  },
+  { nome:"Envio de E-mails", desc:"Disparo programado de e-mails e alertas.",       cat:"Comunicação",   cor:"#e9445a", icon:"mail",     url:"emails.html",      webhook:"", status:"on"  },
+  { nome:"Planilhas",        desc:"Consolidação e limpeza de planilhas.",           cat:"Dados",         cor:"#16a34a", icon:"table",    url:"planilhas.html",   webhook:"", status:"on"  },
+  { nome:"Agenda",           desc:"Sincronização de calendário e lembretes.",       cat:"Produtividade", cor:"#8b5cf6", icon:"calendar", url:"agenda.html",      webhook:"", status:"dev" },
+  { nome:"Estoque",          desc:"Controle e alertas de nível de estoque.",        cat:"Operações",     cor:"#f59e0b", icon:"box",      url:"estoque.html",     webhook:"", status:"on"  },
+  { nome:"WhatsApp Bot",     desc:"Respostas automáticas e notificações.",          cat:"Comunicação",   cor:"#22c55e", icon:"chat",     url:"whatsapp.html",    webhook:"", status:"dev" },
+  { nome:"Financeiro",       desc:"Conciliação de contas e fluxo de caixa.",        cat:"Operações",     cor:"#0ea5e9", icon:"money",    url:"financeiro.html",  webhook:"", status:"on"  },
+  { nome:"Documentos",       desc:"Organização e renomeação de arquivos.",          cat:"Produtividade", cor:"#64748b", icon:"file",     url:"documentos.html",  webhook:"", status:"on"  },
+  { nome:"Integrações API",  desc:"Conexões entre sistemas via API.",               cat:"Sistemas",      cor:"#ec4899", icon:"plug",     url:"integracoes.html", webhook:"", status:"dev" },
+  { nome:"Configurações",    desc:"Parâmetros gerais das automações.",              cat:"Sistemas",      cor:"#475569", icon:"gear",     url:"config.html",      webhook:"", status:"off" },
+].map((a,i)=>({id:i+1,...a}));
+let nextId = APPS.length + 1;
+
+const ICONS = {
+  chart:'<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  money:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>',
+  file:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/>',
+  plug:'<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+  users:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
+};
+const UI = {
+  all:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  open:'<path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+  run:'<path d="M6 4l14 8-14 8z"/>',
+  edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  del:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+};
+const svg = (p, sw=2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const STATUS = { on:"Ativo", dev:"Em breve", off:"Inativo" };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ===================== ESTADO =====================
+let cat = "Todas", view = "grid";
+const $ = id => document.getElementById(id);
+
+// ===================== RENDER =====================
+function renderMenu(){
+  const cats = [...new Set(APPS.map(a=>a.cat))].sort();
+  const item = (c, icon, n) => `<li><button class="${c===cat?"active":""}" data-cat="${esc(c)}">${svg(icon)}<span>${esc(c)}</span><span class="count">${n}</span></button></li>`;
+  $("menu").innerHTML = item("Todas", UI.all, APPS.length)
+    + `<li class="menu-title">Categorias</li>`
+    + cats.map(c => item(c, UI.folder, APPS.filter(a=>a.cat===c).length)).join("");
+  $("catList").innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join("");
+  $("pageTitle").textContent = cat;
+}
+
+function filtered(){
+  const q = $("search").value.trim().toLowerCase(), st = $("statusFilter").value;
+  return APPS.filter(a =>
+    (cat==="Todas" || a.cat===cat) && (!st || a.status===st) &&
+    (a.nome+" "+a.desc).toLowerCase().includes(q));
+}
+
+function actionBtns(a){
+  return `
+    <button class="icon-btn open" data-act="open" data-id="${a.id}" title="Abrir tela" ${a.url?"":"disabled"}>${svg(UI.open)}</button>
+    <button class="icon-btn run"  data-act="run"  data-id="${a.id}" title="Disparar fluxo" ${a.webhook?"":"disabled"}>${svg(UI.run)}</button>
+    <button class="icon-btn edit" data-act="edit" data-id="${a.id}" title="Editar">${svg(UI.edit)}</button>
+    <button class="icon-btn del"  data-act="del"  data-id="${a.id}" title="Excluir">${svg(UI.del)}</button>`;
+}
+const iconBox = a => `<div class="app-icon" style="--c:${esc(a.cor||'#71717a')}">${svg(ICONS[a.icon]||ICONS.bolt)}</div>`;
+const badge = a => `<span class="badge ${a.status}">${STATUS[a.status]}</span>`;
+
+function render(){
+  const list = filtered();
+  if(!list.length){ $("main").innerHTML = `<p class="empty">Nenhuma automação encontrada.</p>`; return; }
+  if(view==="grid"){
+    $("main").innerHTML = `<div class="grid">${list.map(a=>`
+      <div class="card" data-act="open" data-id="${a.id}">
+        ${badge(a)}${iconBox(a)}
+        <h3>${esc(a.nome)}</h3><p>${esc(a.desc)}</p>
+        <div class="card-actions">${actionBtns(a)}</div>
+      </div>`).join("")}</div>`;
+  } else {
+    $("main").innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Automação</th><th class="col-desc">Descrição</th><th class="col-cat">Categoria</th><th class="col-status">Status</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>${list.map(a=>`<tr>
+        <td><div class="name-cell">${iconBox(a)}${esc(a.nome)}</div></td>
+        <td class="col-desc" style="color:var(--muted)">${esc(a.desc)}</td>
+        <td class="col-cat">${esc(a.cat)}</td>
+        <td class="col-status">${badge(a)}</td>
+        <td><div class="actions">${actionBtns(a)}</div></td>
+      </tr>`).join("")}</tbody></table></div>`;
+  }
+}
+const refresh = () => { renderMenu(); render(); };
+
+// ===================== AÇÕES =====================
+$("main").addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if(!el || el.disabled) return;
+  e.stopPropagation();
+  const a = APPS.find(x => x.id === +el.dataset.id);
+  ({ open:openApp, run:runFlow, edit:openEdit, del:openDelete })[el.dataset.act](a);
+});
+
+function openApp(a){
+  if(!a.url) return toast("Esta automação ainda não tem tela configurada.");
+  if(a.status!=="on") return toast(`"${a.nome}" está ${STATUS[a.status].toLowerCase()}.`);
+  window.location.href = a.url;
+}
+
+async function runFlow(a){
+  toast(`Disparando "${a.nome}"...`);
+  try{
+    const r = await fetch(a.webhook,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({automacao:a.nome, origem:"portal", data:new Date().toISOString()})});
+    toast(r.ok ? `✅ Fluxo "${a.nome}" disparado.` : `⚠️ Erro ${r.status} ao disparar.`);
+  }catch(err){ toast("⚠️ Falha de conexão (verifique a URL / CORS)."); }
+}
+
+// ---- Edição rápida (dialog) ----
+let editing = null, pickedIcon = "bolt";
+function renderIconPick(){
+  $("iconPick").innerHTML = Object.keys(ICONS).map(k =>
+    `<button type="button" data-icon="${k}" class="${k===pickedIcon?"sel":""}">${svg(ICONS[k])}</button>`).join("");
+}
+$("iconPick").addEventListener("click", e => {
+  const b = e.target.closest("[data-icon]"); if(!b) return;
+  pickedIcon = b.dataset.icon; renderIconPick();
+});
+function openEdit(a){
+  editing = a || null;
+  const f = $("editForm");
+  const d = a || { nome:"", desc:"", cat: cat==="Todas" ? "" : cat, status:"dev", url:"", webhook:"", cor:"#2f6fed", icon:"bolt" };
+  $("editTitle").textContent = a ? "Editar automação" : "Nova automação";
+  ["nome","desc","cat","status","url","webhook","cor"].forEach(k => f[k].value = d[k]);
+  pickedIcon = d.icon; renderIconPick();
+  $("editDlg").showModal();
+}
+$("editForm").addEventListener("submit", e => {
+  const f = e.target;
+  const data = { nome:f.nome.value.trim(), desc:f.desc.value.trim(), cat:f.cat.value.trim(),
+    status:f.status.value, url:f.url.value.trim(), webhook:f.webhook.value.trim(), cor:f.cor.value, icon:pickedIcon };
+  if(editing){ Object.assign(editing, data); toast("Automação atualizada."); }
+  else { APPS.push({ id:nextId++, ...data }); toast("Automação criada."); }
+  refresh();
+});
+$("newBtn").onclick = () => openEdit();
+
+// ---- Exclusão com duas confirmações ----
+let delTarget = null, delStep = 1;
+function openDelete(a){
+  delTarget = a; delStep = 1;
+  $("delBody").innerHTML = `<p>Deseja excluir <b>${esc(a.nome)}</b>?</p>`;
+  $("delConfirm").textContent = "Continuar";
+  $("delDlg").showModal();
+}
+$("delConfirm").onclick = () => {
+  if(delStep === 1){
+    delStep = 2;
+    $("delBody").innerHTML = `
+      <div class="danger-box">Esta ação não pode ser desfeita. Digite <b>${esc(delTarget.nome)}</b> para confirmar.</div>
+      <input class="input" id="delInput" autocomplete="off" placeholder="${esc(delTarget.nome)}">
+      <span class="hint">Segunda confirmação</span>`;
+    $("delConfirm").textContent = "Excluir definitivamente";
+    $("delInput").focus();
+    return;
+  }
+  if($("delInput").value.trim() !== delTarget.nome) return toast("O nome não confere.");
+  APPS = APPS.filter(a => a.id !== delTarget.id);
+  if(!APPS.some(a => a.cat === cat)) cat = "Todas";
+  $("delDlg").close(); refresh(); toast("Automação excluída.");
+};
+
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => b.closest("dialog").close());
+
+// ===================== FILTROS / MENU =====================
+$("search").addEventListener("input", render);
+$("statusFilter").addEventListener("change", render);
+$("viewSeg").addEventListener("click", e => {
+  const b = e.target.closest("[data-view]"); if(!b) return;
+  view = b.dataset.view;
+  document.querySelectorAll("#viewSeg button").forEach(x => x.classList.toggle("active", x===b));
+  render();
+});
+$("menu").addEventListener("click", e => {
+  const b = e.target.closest("[data-cat]"); if(!b) return;
+  cat = b.dataset.cat; refresh(); toggleSidebar(false);
+});
+function toggleSidebar(open){
+  $("sidebar").classList.toggle("open", open);
+  $("overlay").classList.toggle("show", open);
+}
+$("menuToggle").onclick = () => toggleSidebar(true);
+$("overlay").onclick = () => toggleSidebar(false);
+
+// ===================== TOAST =====================
+let tt;
+function toast(msg){
+  $("toast").textContent = msg; $("toast").classList.add("show");
+  clearTimeout(tt); tt = setTimeout(() => $("toast").classList.remove("show"), 2600);
+}
+
+// ===================== TEMA (sistema + manual) =====================
+const mq = matchMedia("(prefers-color-scheme: dark)");
+let manual = null;
+function applyTheme(){
+  const t = manual || (mq.matches ? "dark" : "light");
+  document.documentElement.dataset.theme = t;
+  $("themeIcon").innerHTML = svg(t==="dark" ? UI.sun : UI.moon);
+  $("themeLabel").textContent = t==="dark" ? "Tema claro" : "Tema escuro";
+}
+$("themeBtn").onclick = () => { manual = document.documentElement.dataset.theme==="dark" ? "light" : "dark"; applyTheme(); };
+mq.addEventListener("change", () => { if(!manual) applyTheme(); });
+
+applyTheme(); refresh();
+</script>
+</body>
+</html>
