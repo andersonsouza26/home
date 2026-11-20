@@ -803,6 +803,10 @@
     .view-actions .btn { flex: 1; justify-content: center; }
   }
 
+  .dfilters { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .dfilters .f-acao { align-self: end; }
+  .dfiltro-info { grid-column: 1 / -1; margin: 0; font-size: .8rem; color: var(--text-muted); }
+  .dfiltro-info b { color: var(--text); }
   /* ===================== Solicitações (lista) ===================== */
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .filters {
@@ -1154,6 +1158,28 @@
           </a>
         </div>
       </header>
+      <section class="filters dfilters" id="dFiltros" aria-label="Filtros do dashboard">
+        <div class="f-field"><label for="dBaseData">Filtrar data por</label><select id="dBaseData">
+          <option value="dataSolicitada" selected>Data da solicitação</option>
+          <option value="dataEmissao">Data de emissão da NF</option>
+          <option value="dataEntrega">Data de entrega</option>
+        </select></div>
+        <div class="f-field"><label for="dDe">Data de</label><div class="input-wrap date-wrap"><input type="text" id="dDe" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div></div>
+        <div class="f-field"><label for="dAte">Data até</label><div class="input-wrap date-wrap"><input type="text" id="dAte" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div></div>
+        <div class="f-field"><label for="dStatus">Status</label><select id="dStatus" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dComprador">Comprador</label><select id="dComprador" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dSolicitante">Solicitante</label><select id="dSolicitante" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dClassificacao">Classificação</label><select id="dClassificacao" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dNatureza">Natureza da operação</label><select id="dNatureza" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dCentro">Centro de custo</label><select id="dCentro" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dFornecedor">Fornecedor</label><select id="dFornecedor" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dTransportador">Transportador</label><select id="dTransportador" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field"><label for="dRateio">Rateio</label><select id="dRateio" data-dfiltro><option value="*" selected>Todos</option></select></div>
+        <div class="f-field f-acao"><button type="button" class="btn btn-neutral" id="dLimpar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Limpar filtros</button></div>
+        <p class="dfiltro-info" id="dFiltroInfo"></p>
+      </section>
       <div id="dashConteudo">
         <div class="kpis" id="kpis"></div>
         <div class="dgrid" id="dgrid"></div>
@@ -2850,17 +2876,149 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     tag: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
   };
   let dashMontado = false;
-  async function garantirDashboard() { if (!dashMontado) await montarDashboard(false); }
+  async function garantirDashboard() { await montarDashboard(false); }
+
+  // ===================== Dashboard: filtros e cálculos (feitos aqui, a partir das solicitações) =====================
+  const D_CAMPOS = { dStatus: 'status', dComprador: 'comprador', dSolicitante: 'solicitante', dClassificacao: 'classificacao', dNatureza: 'natureza', dFornecedor: 'fornecedor', dTransportador: 'transportador', dRateio: 'rateio' };
+  const ehRateio = s => s.rateio === 'Sim' || s.centros.length > 1;
+  let preenchendoDash = false;
+  function preencherFiltrosDash() {
+    preenchendoDash = true;
+    const enc = (id, valores, rotulo) => {
+      const el = document.getElementById(id), atual = el.value;
+      const unicos = [...new Set(valores.filter(v => v != null && String(v).trim() !== '').map(v => String(v).trim()))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      el.replaceChildren(h('option', { value: '*', text: 'Todos' }), ...unicos.map(v => h('option', { value: v, text: rotulo ? rotulo(v) : v })));
+      el.value = unicos.includes(atual) ? atual : '*';
+      el.dispatchEvent(new Event('change'));
+    };
+    const dePlanilha = lista => opcoesLista(lista).map(o => o.valor);
+    enc('dStatus', STATUS_LISTA.concat(SOL.map(s => s.status)));
+    enc('dComprador', SOL.map(s => s.comprador).concat(dePlanilha('tbListaComprador[Comprador]')));
+    enc('dSolicitante', SOL.map(s => s.solicitante).concat(dePlanilha('tbListaSolicitante[Solicitante]')));
+    enc('dClassificacao', SOL.map(s => s.classificacao).concat(dePlanilha('tbListaClassificacao[Classificação]')));
+    enc('dNatureza', SOL.map(s => s.natureza).concat(dePlanilha('tbListaNatureza[Natureza da Operação]')));
+    enc('dFornecedor', SOL.map(s => s.fornecedor).concat(dePlanilha('tbListaFornecedor[Fornecedor]')));
+    enc('dTransportador', SOL.map(s => s.transportador).concat(dePlanilha('tbListaTransportador[Transportador]')));
+    enc('dRateio', ['Sim', 'Não']);
+    const descCC = {}; SOL.forEach(s => s.centros.forEach(c => { if (c.cc && !descCC[c.cc]) descCC[c.cc] = c.descricao; }));
+    enc('dCentro', SOL.flatMap(s => s.centros.map(c => c.cc)).concat(dePlanilha('tbListaCentroCusto[Código]')), v => rotuloCentro(v, descCC[v]));
+    preenchendoDash = false;
+  }
+  // Devolve cópias das solicitações filtradas; _f = fração do valor que entra (muda só no filtro de centro de custo)
+  function filtrarDash() {
+    const v = id => document.getElementById(id).value;
+    const base = v('dBaseData'), de = brISO(document.getElementById('dDe').value), ate = brISO(document.getElementById('dAte').value), cc = v('dCentro');
+    return SOL.filter(s => {
+      for (const [id, campo] of Object.entries(D_CAMPOS)) {
+        const f = v(id); if (f === '*') continue;
+        if (campo === 'rateio') { if ((ehRateio(s) ? 'Sim' : 'Não') !== f) return false; }
+        else if (String(s[campo] || '').trim() !== f) return false;
+      }
+      if (de || ate) { const d = s[base]; if (!d || (de && d < de) || (ate && d > ate)) return false; }
+      if (cc !== '*' && !s.centros.some(c => String(c.cc) === cc)) return false;
+      return true;
+    }).map(s => {
+      const centros = cc === '*' ? s.centros : s.centros.filter(c => String(c.cc) === cc);
+      const somaPct = s.centros.reduce((a, c) => a + (+c.pct || 0), 0) || 1;
+      const f = cc === '*' ? 1 : centros.reduce((a, c) => a + (+c.pct || 0), 0) / somaPct;
+      return Object.assign({}, s, { centros, _f: f, _soma: somaPct });
+    });
+  }
+  function calcularResumos(lista) {
+    const VR = 'Valor Rateado';
+    const num = x => +x || 0;
+    const vr = s => (valorTotalSol(s) || 0) * s._f;
+    const nfV = s => num(s.valorNF) * s._f, frV = s => num(s.valorFrete) * s._f;
+    const temNF = s => !!(s.nf || s.valorNF != null);
+    const total = lista.reduce((a, s) => a + vr(s), 0);
+    const totNF = lista.reduce((a, s) => a + nfV(s), 0), totFr = lista.reduce((a, s) => a + frV(s), 0);
+    const comNF = lista.filter(temNF);
+    const naoCanc = lista.filter(s => s.status !== 'Cancelado');
+    const prazos = lista.filter(s => s.dataSolicitada && s.dataEntrega).map(s => (new Date(s.dataEntrega) - new Date(s.dataSolicitada)) / 864e5).filter(d => d >= 0);
+    const pctDe = v => total ? v / total : 0;
+    const agrupa = (chaveFn, extra) => {
+      const m = new Map();
+      lista.forEach(s => { const k = chaveFn(s); if (k == null || k === '') return; let g = m.get(k); if (!g) { g = { k, sols: [] }; m.set(k, g); } g.sols.push(s); });
+      return [...m.values()].map(g => extra(g.k, g.sols));
+    };
+    const ordVR = arr => arr.sort((a, b) => b[VR] - a[VR] || b['Solicitações'] - a['Solicitações']);
+    const somaVR = ss => ss.reduce((a, s) => a + vr(s), 0);
+    // centro de custo: valor da solicitação dividido pelo percentual de cada centro
+    const ccMap = new Map();
+    lista.forEach(s => {
+      const vt = valorTotalSol(s) || 0;
+      s.centros.forEach(c => {
+        const k = String(c.cc || ''); if (!k) return;
+        let g = ccMap.get(k); if (!g) { g = { 'Centro de Custo': rotuloCentro(k, c.descricao), 'Código': k, [VR]: 0, ids: new Set(), rat: new Set() }; ccMap.set(k, g); }
+        g[VR] += vt * (num(c.pct) / s._soma); g.ids.add(s.id); if (ehRateio(s)) g.rat.add(s.id);
+      });
+    });
+    const tbCentroCusto = ordVR([...ccMap.values()].map(g => ({ 'Centro de Custo': g['Centro de Custo'], 'Código': g['Código'], [VR]: g[VR], '% do Total': pctDe(g[VR]), 'Solicitações': g.ids.size, 'Com Rateio': g.rat.size })));
+    const meses = [...new Set(lista.map(s => (s.dataSolicitada || '').slice(0, 7)).filter(Boolean))].sort();
+    const doMes = m => lista.filter(s => (s.dataSolicitada || '').slice(0, 7) === m);
+    const tbMensal = meses.map(m => { const ss = doMes(m), v = somaVR(ss), n = ss.filter(temNF).length; return { 'Mês': m, 'Solicitações': ss.length, [VR]: v, 'Valor Frete': ss.reduce((a, s) => a + frV(s), 0), 'Ticket Médio': n ? v / n : 0 }; });
+    const tbStatusMensal = meses.map(m => { const ss = doMes(m), r = { 'Mês': m }; STATUS_LISTA.forEach(st => r[st] = ss.filter(s => s.status === st).length); return r; });
+    const tbStatus = STATUS_LISTA.map(st => { const ss = lista.filter(s => s.status === st); return { 'Status': st, 'Solicitações': ss.length, '% Solicitações': lista.length ? ss.length / lista.length : 0, [VR]: somaVR(ss) }; });
+    const simples = (campo, rotulo) => ordVR(agrupa(s => s[campo], (k, ss) => ({ [rotulo]: k, 'Solicitações': ss.length, [VR]: somaVR(ss), '% do Valor': pctDe(somaVR(ss)) })));
+    const tbRateio = [['Com rateio', 'Sim', true], ['Sem rateio', 'Não', false]].map(([t, r, b]) => { const ss = lista.filter(s => ehRateio(s) === b); return { 'Tipo': t, 'Rateio': r, 'Solicitações': ss.length, [VR]: somaVR(ss), '% do Valor': pctDe(somaVR(ss)) }; });
+    const tbFornecedor = ordVR(agrupa(s => temNF(s) ? s.fornecedor : '', (k, ss) => { const v = somaVR(ss), n = new Set(ss.map(s => s.nf || s.id)).size; return { 'Fornecedor': k, 'NFs': n, [VR]: v, 'Ticket Médio': n ? v / n : 0, '% do Valor': pctDe(v) }; }));
+    const ABERTO = ['Pendente', 'Em Andamento', 'Aprovado'];
+    const tbComprador = ordVR(agrupa(s => s.comprador, (k, ss) => ({ 'Comprador': k, 'Solicitações': ss.length, 'Concluídas': ss.filter(s => s.status === 'Concluído').length, 'Em Aberto': ss.filter(s => ABERTO.includes(s.status)).length, [VR]: somaVR(ss) })));
+    const tbSolicitante = agrupa(s => s.solicitante, (k, ss) => ({ 'Solicitante': k, 'Solicitações': ss.length, [VR]: somaVR(ss) })).sort((a, b) => b['Solicitações'] - a['Solicitações']);
+    const tbTransportador = agrupa(s => s.transportador, (k, ss) => { const v = ss.reduce((a, s) => a + frV(s), 0); return { 'Transportador': k, 'Entregas': ss.length, 'Valor Frete': v, 'Frete Médio': ss.length ? v / ss.length : 0 }; }).sort((a, b) => b['Valor Frete'] - a['Valor Frete']);
+    const ind = {
+      'Total de solicitações': lista.length,
+      'Valor total (rateado)': total,
+      'Valor total das NFs': totNF,
+      'Valor total de frete': totFr,
+      'Frete sobre o valor total': pctDe(totFr),
+      'Ticket médio por solicitação com NF': comNF.length ? comNF.reduce((a, s) => a + vr(s), 0) / comNF.length : 0,
+      'Solicitações com rateio': lista.filter(ehRateio).length,
+      'Percentual com rateio': lista.length ? lista.filter(ehRateio).length / lista.length : 0,
+      'Aguardando NF (exceto canceladas)': naoCanc.filter(s => !temNF(s)).length,
+      'Em aberto (Pendente, Em Andamento, Aprovado)': lista.filter(s => ABERTO.includes(s.status)).length,
+      'Taxa de conclusão (sem canceladas)': naoCanc.length ? naoCanc.filter(s => s.status === 'Concluído').length / naoCanc.length : 0,
+      'Prazo médio: solicitação até entrega (dias)': prazos.length ? prazos.reduce((a, b) => a + b, 0) / prazos.length : 0,
+      'Centros de custo com gasto': tbCentroCusto.filter(r => r[VR] > 0).length,
+      'Fornecedores com NF': tbFornecedor.length
+    };
+    return { tabelas: {
+      tbIndicadores: { linhas: Object.entries(ind).map(([k, v]) => ({ 'Indicador': k, 'Valor': v })) },
+      tbMensal: { linhas: tbMensal }, tbStatusMensal: { linhas: tbStatusMensal }, tbStatus: { linhas: tbStatus }, tbCentroCusto: { linhas: tbCentroCusto },
+      tbRateio: { linhas: tbRateio }, tbClassificacao: { linhas: simples('classificacao', 'Classificação') }, tbNatureza: { linhas: simples('natureza', 'Natureza da Operação') },
+      tbFornecedor: { linhas: tbFornecedor }, tbComprador: { linhas: tbComprador }, tbSolicitante: { linhas: tbSolicitante }, tbTransportador: { linhas: tbTransportador }
+    } };
+  }
+  let tDash;
+  const reDash = () => { if (preenchendoDash || limpandoDash) return; clearTimeout(tDash); tDash = setTimeout(() => { if (dashMontado && !limpandoDash) montarDashboard(true); }, 120); };
+  let limpandoDash = false;
+  ['dBaseData', 'dCentro', ...Object.keys(D_CAMPOS)].forEach(id => document.getElementById(id).addEventListener('change', reDash));
+  ['dDe', 'dAte'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('change', reDash);
+    el.addEventListener('input', () => { if (el.value === '' || parseDate(el.value)) reDash(); });
+  });
+  document.getElementById('dLimpar').addEventListener('click', () => {
+    limpandoDash = true;
+    ['dDe', 'dAte'].forEach(id => { const el = document.getElementById(id); el.value = ''; el.classList.remove('invalid'); });
+    ['dCentro', ...Object.keys(D_CAMPOS)].forEach(id => { const el = document.getElementById(id); el.value = '*'; el.dispatchEvent(new Event('change')); });
+    const b = document.getElementById('dBaseData'); b.value = 'dataSolicitada'; b.dispatchEvent(new Event('change'));
+    limpandoDash = false;
+    montarDashboard(true);
+  });
 
   async function montarDashboard(animar) {
-    let dados;
-    try { dados = await carregarResumos(); }
-    catch (e) { showToast('Falha ao carregar dados', 'Não foi possível ler os resumos (' + e.message + ').', 'error'); return; }
+    await garantirSolicitacoes();
+    preencherFiltrosDash();
+    const filtradas = filtrarDash();
+    const dados = calcularResumos(filtradas);
     const T = nome => (dados.tabelas[nome] || { linhas: [] }).linhas;
     const ind = Object.fromEntries(T('tbIndicadores').map(r => [r['Indicador'], r['Valor']]));
     const I = k => +ind[k] || 0;
-    const dt = String(dados.geradoEm || '').split('-').reverse().join('/');
-    document.getElementById('dashFonte').textContent = (dados.modo === 'simulacao' ? 'Simulação' : 'Planilha') + ' · atualizado em ' + dt;
+    const agora = new Date();
+    document.getElementById('dashFonte').textContent = (FONTE_DADOS.modo === 'api' ? 'Planilha' : 'Simulação') + ' · calculado em ' + toStr(agora) + ' ' + pad(agora.getHours()) + ':' + pad(agora.getMinutes());
+    const info = document.getElementById('dFiltroInfo');
+    info.replaceChildren(h('b', { text: plural(filtradas.length, 'solicitação', 'solicitações') }), filtradas.length === SOL.length ? ' consideradas (todas)' : ' consideradas de ' + fInt(SOL.length) + ' (filtro ativo)');
 
     // ---- KPIs ----
     const mensal = T('tbMensal');
@@ -2967,9 +3125,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const area = document.getElementById('dashConteudo');
     area.classList.add('is-loading');
     await new Promise(r => setTimeout(r, 350));
+    if (FONTE_DADOS.modo === 'api') SOL = null;
     await montarDashboard(true);
     area.classList.remove('is-loading');
-    showToast('Dados atualizados', FONTE_DADOS.modo === 'api' ? 'Resumos lidos da planilha.' : 'Resumos da simulação recarregados.');
+    showToast('Dados atualizados', FONTE_DADOS.modo === 'api' ? 'Indicadores recalculados a partir da planilha.' : 'Indicadores recalculados.');
   });
 
   // ===================== Solicitações: dados =====================
