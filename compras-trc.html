@@ -896,22 +896,34 @@
 
   .g-detail td { background: var(--surface-2); padding: 0; white-space: normal; }
   .gd {
-    padding: 4px 20px 20px 56px;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 28px;
+    padding: 16px 20px 20px 56px;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;
   }
+  .gd > div {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; min-width: 0;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .gd > div:hover { border-color: var(--border-strong); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
   .gd h4 {
     font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-    color: var(--text-muted); margin-bottom: 8px;
+    color: var(--text-muted); margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
   }
-  .gd dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: .82rem; }
-  .gd dt { color: var(--text-muted); white-space: nowrap; }
-  .gd dd { min-width: 0; overflow-wrap: anywhere; }
+  .gd dl { display: grid; grid-template-columns: minmax(90px, auto) 1fr; font-size: .84rem; margin: 0; }
+  .gd dt, .gd dd { padding: 6px 8px; margin: 0; transition: background .12s; }
+  .gd dt { color: var(--text-muted); white-space: nowrap; border-radius: 6px 0 0 6px; }
+  .gd dd { min-width: 0; overflow-wrap: anywhere; font-weight: 500; border-radius: 0 6px 6px 0; }
+  .gd dt:hover, .gd dt:hover + dd, .gd dd:hover { background: var(--hover); }
+  .gd dt:has(+ dd:hover) { background: var(--hover); }
+  .gd dd:hover { color: var(--primary); }
   .gd .gd-wide { grid-column: span 2; }
-  .gd table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-  .gd th { text-align: left; font-size: .68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 4px 8px 6px 0; background: none; border-bottom: 1px solid var(--border); }
-  .gd td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--border); background: none; }
+  .gd table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  .gd th { text-align: left; font-size: .68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 4px 8px 6px; background: none; border-bottom: 1px solid var(--border); }
+  .gd td { padding: 8px; border-bottom: 1px solid var(--border); background: none; transition: background .12s; }
+  .gd tbody tr:last-child td { border-bottom: 0; }
+  .gd tbody tr:hover td { background: var(--hover); }
   .gd .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .gd-obs { font-size: .84rem; color: var(--text); }
+  .gd-obs { font-size: .84rem; color: var(--text); margin: 0; padding: 6px 8px; white-space: pre-wrap; }
 
   .grid-empty { padding: 48px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .grid-empty[hidden] { display: none; }
@@ -1011,6 +1023,9 @@
     .grid td.g-acoes-c { position: static; grid-column: span 2; box-shadow: none; }
     .g-acoes { justify-content: flex-start; }
     .g-detail td { border-bottom: 1px solid var(--border); }
+    .grid .gd table { display: table; } .grid .gd thead { display: table-header-group; }
+    .grid .gd tbody { display: table-row-group; } .grid .gd tr { display: table-row; } .grid .gd td, .grid .gd th { display: table-cell; }
+    .gd { padding: 12px 16px 16px; }
   }
   @media (max-width: 600px) {
     .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; }
@@ -3062,7 +3077,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   function linhaDetalhe(s) {
     const vt = valorTotalSol(s) || 0;
     const dl = pares => h('dl', {}, pares.map(([k, v]) => [h('dt', { text: k }), h('dd', { text: v || '—' })]));
-    return h('tr', { class: 'g-detail', 'data-detalhe': s.id }, h('td', { colspan: 9 }, h('div', { class: 'gd' },
+    return h('tr', { class: 'g-detail', 'data-detalhe': s.id }, h('td', { colspan: 10 }, h('div', { class: 'gd' },
       h('div', {}, h('h4', { text: 'Dados da solicitação' }), dl([['Nº Fluig', s.fluig], ['Nº Solicitação', s.solicitacao], ['Solicitante', s.solicitante], ['Comprador', s.comprador], ['Data', isoBR(s.dataSolicitada)], ['Classificação', s.classificacao]])),
       h('div', {}, h('h4', { text: 'Detalhes da compra' }), dl([['Produtos', s.produtos], ['Natureza', s.natureza], ['Aplicação', s.aplicacao], ['Rateio', s.rateio]])),
       h('div', {}, h('h4', { text: 'Fornecedor e NF' }), dl([['Fornecedor', s.fornecedor], ['NF', s.nf], ['Valor da NF', s.valorNF != null ? fBRL(s.valorNF) : ''], ['Emissão', isoBR(s.dataEmissao)], ['Entrega', isoBR(s.dataEntrega)]])),
