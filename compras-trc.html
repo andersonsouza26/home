@@ -1216,10 +1216,13 @@
           <label for="fStatus">Status</label>
           <select id="fStatus">
             <option value="*" selected>Todos</option>
-            <option value="Pendente" data-color="#eda100">Pendente</option>
-            <option value="Em Andamento" data-color="#2a78d6">Em Andamento</option>
-            <option value="Aprovado" data-color="#e87ba4">Aprovado</option>
-            <option value="Concluído" data-color="#008300">Concluído</option>
+            <option value="Indefinido" data-color="#94a3b8">Indefinido</option>
+            <option value="Em Processo de Cotação no prazo" data-color="#2a78d6">Em Processo de Cotação no prazo</option>
+            <option value="PC Aguardando Aprovação em atraso" data-color="#eda100">PC Aguardando Aprovação em atraso</option>
+            <option value="PC Aprovado no prazo" data-color="#e87ba4">PC Aprovado no prazo</option>
+            <option value="PC Aprovado em atraso" data-color="#d97706">PC Aprovado em atraso</option>
+            <option value="Finalizado" data-color="#0ea5a4">Finalizado</option>
+            <option value="Entregue" data-color="#008300">Entregue</option>
             <option value="Cancelado" data-color="#e34948">Cancelado</option>
           </select>
         </div>
@@ -1395,10 +1398,13 @@
           <label for="status">Status <span class="req">*</span></label>
           <select id="status" name="status" data-grava="tbSolicitacoes[Status]" data-lista="tbListaStatus[Status]" data-lista-fixa title="Lista fixa do sistema (espelhada em Listas › tbListaStatus)">
             <option value="">Selecione...</option>
-            <option data-color="#eda100">Pendente</option>
-            <option data-color="#2a78d6">Em Andamento</option>
-            <option data-color="#e87ba4">Aprovado</option>
-            <option data-color="#008300">Concluído</option>
+            <option data-color="#94a3b8">Indefinido</option>
+            <option data-color="#2a78d6">Em Processo de Cotação no prazo</option>
+            <option data-color="#eda100">PC Aguardando Aprovação em atraso</option>
+            <option data-color="#e87ba4">PC Aprovado no prazo</option>
+            <option data-color="#d97706">PC Aprovado em atraso</option>
+            <option data-color="#0ea5a4">Finalizado</option>
+            <option data-color="#008300">Entregue</option>
             <option data-color="#e34948">Cancelado</option>
           </select>
         </div>
@@ -1590,10 +1596,13 @@
         <label for="qeStatus">Status <span class="req">*</span></label>
         <select id="qeStatus" data-grava="tbSolicitacoes[Status]" data-lista="tbListaStatus[Status]" data-lista-fixa>
           <option value="">Selecione...</option>
-          <option value="Pendente" data-color="#eda100">Pendente</option>
-          <option value="Em Andamento" data-color="#2a78d6">Em Andamento</option>
-          <option value="Aprovado" data-color="#e87ba4">Aprovado</option>
-          <option value="Concluído" data-color="#008300">Concluído</option>
+          <option value="Indefinido" data-color="#94a3b8">Indefinido</option>
+          <option value="Em Processo de Cotação no prazo" data-color="#2a78d6">Em Processo de Cotação no prazo</option>
+          <option value="PC Aguardando Aprovação em atraso" data-color="#eda100">PC Aguardando Aprovação em atraso</option>
+          <option value="PC Aprovado no prazo" data-color="#e87ba4">PC Aprovado no prazo</option>
+          <option value="PC Aprovado em atraso" data-color="#d97706">PC Aprovado em atraso</option>
+          <option value="Finalizado" data-color="#0ea5a4">Finalizado</option>
+          <option value="Entregue" data-color="#008300">Entregue</option>
           <option value="Cancelado" data-color="#e34948">Cancelado</option>
         </select>
       </div>
@@ -2667,8 +2676,11 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const fMes = iso => { const [y, m] = String(iso).split('-'); return MESES_ABREV[+m - 1] + '/' + y.slice(2); };
   const fMesLongo = iso => { const [y, m] = String(iso).split('-'); return MESES[+m - 1] + ' de ' + y; };
   const plural = (n, s, p) => fInt(n) + ' ' + (n === 1 ? s : p);
-  const STATUS_LISTA = ['Pendente', 'Em Andamento', 'Aprovado', 'Concluído', 'Cancelado'];
-  const COR_STATUS = { 'Pendente': 'var(--st-pend)', 'Em Andamento': 'var(--st-and)', 'Aprovado': 'var(--st-apr)', 'Concluído': 'var(--st-con)', 'Cancelado': 'var(--st-can)' };
+  // Status iguais aos do Fluig + Entregue (status final). Espelhado em Listas › tbListaStatus.
+  const STATUS_LISTA = ['Indefinido', 'Em Processo de Cotação no prazo', 'PC Aguardando Aprovação em atraso', 'PC Aprovado no prazo', 'PC Aprovado em atraso', 'Finalizado', 'Entregue', 'Cancelado'];
+  const COR_STATUS = new Proxy({ 'Indefinido': '#94a3b8', 'Em Processo de Cotação no prazo': '#2a78d6', 'PC Aguardando Aprovação em atraso': '#eda100', 'PC Aprovado no prazo': '#e87ba4', 'PC Aprovado em atraso': '#d97706', 'Finalizado': '#0ea5a4', 'Entregue': '#008300', 'Cancelado': '#e34948' }, { get: (o, k) => o[k] || '#94a3b8' });
+  const STATUS_ABERTO = ['Indefinido', 'Em Processo de Cotação no prazo', 'PC Aguardando Aprovação em atraso', 'PC Aprovado no prazo', 'PC Aprovado em atraso'];
+  const STATUS_CONCLUIDO = ['Finalizado', 'Entregue'];
 
   // Cria elementos com texto seguro (textContent); 'html' só é usado para ícones fixos do próprio arquivo
   function h(tag, props, ...kids) {
@@ -2962,8 +2974,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const simples = (campo, rotulo) => ordVR(agrupa(s => s[campo], (k, ss) => ({ [rotulo]: k, 'Solicitações': ss.length, [VR]: somaVR(ss), '% do Valor': pctDe(somaVR(ss)) })));
     const tbRateio = [['Com rateio', 'Sim', true], ['Sem rateio', 'Não', false]].map(([t, r, b]) => { const ss = lista.filter(s => ehRateio(s) === b); return { 'Tipo': t, 'Rateio': r, 'Solicitações': ss.length, [VR]: somaVR(ss), '% do Valor': pctDe(somaVR(ss)) }; });
     const tbFornecedor = ordVR(agrupa(s => temNF(s) ? s.fornecedor : '', (k, ss) => { const v = somaVR(ss), n = new Set(ss.map(s => s.nf || s.id)).size; return { 'Fornecedor': k, 'NFs': n, [VR]: v, 'Ticket Médio': n ? v / n : 0, '% do Valor': pctDe(v) }; }));
-    const ABERTO = ['Pendente', 'Em Andamento', 'Aprovado'];
-    const tbComprador = ordVR(agrupa(s => s.comprador, (k, ss) => ({ 'Comprador': k, 'Solicitações': ss.length, 'Concluídas': ss.filter(s => s.status === 'Concluído').length, 'Em Aberto': ss.filter(s => ABERTO.includes(s.status)).length, [VR]: somaVR(ss) })));
+    const ABERTO = STATUS_ABERTO;
+    const tbComprador = ordVR(agrupa(s => s.comprador, (k, ss) => ({ 'Comprador': k, 'Solicitações': ss.length, 'Concluídas': ss.filter(s => STATUS_CONCLUIDO.includes(s.status)).length, 'Em Aberto': ss.filter(s => ABERTO.includes(s.status)).length, [VR]: somaVR(ss) })));
     const tbSolicitante = agrupa(s => s.solicitante, (k, ss) => ({ 'Solicitante': k, 'Solicitações': ss.length, [VR]: somaVR(ss) })).sort((a, b) => b['Solicitações'] - a['Solicitações']);
     const tbTransportador = agrupa(s => s.transportador, (k, ss) => { const v = ss.reduce((a, s) => a + frV(s), 0); return { 'Transportador': k, 'Entregas': ss.length, 'Valor Frete': v, 'Frete Médio': ss.length ? v / ss.length : 0 }; }).sort((a, b) => b['Valor Frete'] - a['Valor Frete']);
     const ind = {
@@ -2977,7 +2989,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       'Percentual com rateio': lista.length ? lista.filter(ehRateio).length / lista.length : 0,
       'Aguardando NF (exceto canceladas)': naoCanc.filter(s => !temNF(s)).length,
       'Em aberto (Pendente, Em Andamento, Aprovado)': lista.filter(s => ABERTO.includes(s.status)).length,
-      'Taxa de conclusão (sem canceladas)': naoCanc.length ? naoCanc.filter(s => s.status === 'Concluído').length / naoCanc.length : 0,
+      'Taxa de conclusão (sem canceladas)': naoCanc.length ? naoCanc.filter(s => STATUS_CONCLUIDO.includes(s.status)).length / naoCanc.length : 0,
       'Prazo médio: solicitação até entrega (dias)': prazos.length ? prazos.reduce((a, b) => a + b, 0) / prazos.length : 0,
       'Centros de custo com gasto': tbCentroCusto.filter(r => r[VR] > 0).length,
       'Fornecedores com NF': tbFornecedor.length
@@ -3048,10 +3060,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     kpis.replaceChildren(
       hero,
       kpi('doc', 'Solicitações', I('Total de solicitações'), fInt, plural(I('Solicitações com rateio'), 'com rateio', 'com rateio')),
-      kpi('inbox', 'Em aberto', I('Em aberto (Pendente, Em Andamento, Aprovado)'), fInt, 'Pendente, Em Andamento ou Aprovado'),
+      kpi('inbox', 'Em aberto', I('Em aberto (Pendente, Em Andamento, Aprovado)'), fInt, 'Indefinido, em cotação ou PC aguardando/aprovado'),
       kpi('tag', 'Aguardando NF', I('Aguardando NF (exceto canceladas)'), fInt, 'Solicitações sem nota fiscal'),
       kpi('money', 'Ticket médio', I('Ticket médio por solicitação com NF'), fBRL, 'Por solicitação com NF'),
-      kpi('check', 'Taxa de conclusão', I('Taxa de conclusão (sem canceladas)'), fPct, 'Concluídas, sem contar canceladas', medidor(I('Taxa de conclusão (sem canceladas)'))),
+      kpi('check', 'Taxa de conclusão', I('Taxa de conclusão (sem canceladas)'), fPct, 'Finalizadas ou entregues, sem contar canceladas', medidor(I('Taxa de conclusão (sem canceladas)'))),
       kpi('split', 'Com rateio', I('Percentual com rateio'), fPct, 'Das solicitações', medidor(I('Percentual com rateio'))),
       kpi('clock', 'Prazo médio', I('Prazo médio: solicitação até entrega (dias)'), v => nfDec.format(v) + ' dias', 'Da solicitação até a entrega'),
       kpi('truck', 'Frete sobre o total', I('Frete sobre o valor total'), fPct, fBRL(I('Valor total de frete')) + ' em fretes', medidor(I('Frete sobre o valor total')))
