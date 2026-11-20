@@ -297,6 +297,8 @@
   .cs-option.active { background: var(--hover); }
   .cs-option.selected { color: var(--primary); font-weight: 600; }
   .cs-option.selected svg { opacity: 1; }
+  .cs-search { position: sticky; top: -6px; z-index: 1; background: var(--surface); margin: -6px -6px 6px; padding: 6px 6px 6px; border-bottom: 1px solid var(--border); list-style: none; }
+  .cs-search input { width: 100%; padding: 8px 10px; font-size: .9rem; }
   .cs-empty { padding: 10px; font-size: .8rem; color: var(--text-muted); font-style: italic; }
 
   /* ===== Calendário personalizado ===== */
@@ -1792,7 +1794,18 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
 
     const opts = () => [...sel.options].filter(o => o.value !== '' || (sel.dataset.vazio !== undefined && o === sel.options[0]));
     const dot = o => o.dataset.color ? '<i class="dot" style="background:' + o.dataset.color + '"></i>' : '';
-    let active = -1;
+    let active = -1, termo = '', vis = [];
+    const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const busca = document.createElement('input');
+    busca.type = 'search';
+    busca.className = 'cs-busca';
+    busca.placeholder = 'Digite para filtrar…';
+    busca.autocomplete = 'off';
+    busca.setAttribute('aria-label', 'Filtrar opções');
+    const buscaLi = document.createElement('li');
+    buscaLi.className = 'cs-search';
+    buscaLi.appendChild(busca);
 
     function sync() {
       const o = sel.options[sel.selectedIndex];
@@ -1802,8 +1815,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     }
     function setActive(i) {
       active = i;
-      [...menu.children].forEach((li, j) => li.classList.toggle('active', j === i));
-      if (menu.children[i]) menu.children[i].scrollIntoView({ block: 'nearest' });
+      const lis = menu.querySelectorAll('.cs-option');
+      lis.forEach((li, j) => li.classList.toggle('active', j === i));
+      if (lis[i]) lis[i].scrollIntoView({ block: 'nearest' });
     }
     function choose(o) {
       sel.value = o.value;
@@ -1812,14 +1826,19 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       btn.focus();
     }
     function render() {
-      menu.innerHTML = '';
-      if (!opts().length) {
+      [...menu.children].forEach(li => { if (li !== buscaLi) li.remove(); });
+      if (!buscaLi.parentNode) menu.appendChild(buscaLi);
+      const t = norm(termo);
+      vis = opts().filter(o => !t || norm(o.text).includes(t) || norm(o.value).includes(t));
+      if (!vis.length) {
         const li = document.createElement('li');
         li.className = 'cs-empty';
-        li.textContent = sel.dataset.lista ? 'Lista não carregada · planilha › Listas › ' + sel.dataset.lista : 'Sem opções';
+        li.textContent = !opts().length
+          ? (sel.dataset.lista ? 'Lista não carregada · planilha › Listas › ' + sel.dataset.lista : 'Sem opções')
+          : 'Nenhum resultado para "' + termo + '"';
         menu.appendChild(li);
       }
-      opts().forEach((o, i) => {
+      vis.forEach((o, i) => {
         const li = document.createElement('li');
         li.className = 'cs-option' + (o.selected ? ' selected' : '');
         li.setAttribute('role', 'option');
@@ -1831,26 +1850,33 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         menu.appendChild(li);
       });
     }
-    function open() {
+    function open(inicial) {
+      termo = typeof inicial === 'string' ? inicial : '';
+      busca.value = termo;
       render();
       showPop(wrap, menu, btn);
-      const idx = opts().findIndex(o => o.selected);
+      if (!menu.classList.contains('open')) return;
+      const idx = vis.findIndex(o => o.selected);
       setActive(idx < 0 ? 0 : idx);
-      play([...menu.children], { opacity: [0, 1], transform: ['translateY(-4px)', 'none'] }, { duration: .2, ease: 'easeOut', delay: M && M.stagger(.03) });
+      busca.focus();
+      play([...menu.querySelectorAll('.cs-option')], { opacity: [0, 1], transform: ['translateY(-4px)', 'none'] }, { duration: .2, ease: 'easeOut', delay: M && M.stagger(.03) });
     }
 
-    btn.addEventListener('click', open);
+    btn.addEventListener('click', () => open());
     btn.addEventListener('keydown', e => {
-      const isOpen = menu.classList.contains('open');
-      const n = opts().length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); }
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== ' ') { e.preventDefault(); open(e.key); }
+    });
+    busca.addEventListener('input', () => { termo = busca.value; render(); setActive(vis.length ? 0 : -1); });
+    busca.addEventListener('keydown', e => {
+      const n = vis.length;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        if (!isOpen) { open(); return; }
-        setActive((active + (e.key === 'ArrowDown' ? 1 : -1) + n) % n);
-      } else if ((e.key === 'Enter' || e.key === ' ') && isOpen) {
+        if (n) setActive((active + (e.key === 'ArrowDown' ? 1 : -1) + n) % n);
+      } else if (e.key === 'Enter') {
         e.preventDefault();
-        choose(opts()[active]);
-      } else if (e.key === 'Tab' && isOpen) {
+        if (vis[active]) choose(vis[active]);
+      } else if (e.key === 'Tab') {
         closePop();
       }
     });
