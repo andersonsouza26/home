@@ -626,6 +626,23 @@
   a.btn { text-decoration: none; }
   .btn-icon-only { padding: 11px 14px; }
   .is-loading { opacity: .5; transition: opacity .2s; pointer-events: none; }
+  /* ===== Loader (spinner) durante chamadas ao Power Automate ===== */
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite; display: inline-block; flex-shrink: 0; }
+  .loader-overlay { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: rgba(0,0,0,.28); backdrop-filter: blur(1.5px); opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
+  .loader-overlay.on { opacity: 1; visibility: visible; }
+  .loader-box { display: flex; align-items: center; gap: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 14px 20px; font-size: .92rem; font-weight: 600; }
+  .loader-box .spinner { width: 22px; height: 22px; color: var(--primary); }
+  .btn-carregando { position: relative; pointer-events: none; }
+  .btn-carregando > * { visibility: hidden; }
+  .btn-carregando::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite; }
+  /* ===== Skeleton (primeira carga) ===== */
+  @keyframes brilho { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  .sk { display: block; border-radius: 6px; min-height: 12px; background: linear-gradient(90deg, var(--neutral) 25%, var(--border) 50%, var(--neutral) 75%); background-size: 200% 100%; animation: brilho 1.3s ease-in-out infinite; }
+  .sk-kpi { height: 118px; border-radius: var(--radius); }
+  .sk-kpi.hero { grid-column: span 2; grid-row: span 2; height: auto; min-height: 250px; }
+  .sk-card { height: 300px; border-radius: var(--radius); grid-column: span 6; }
+  @media (prefers-reduced-motion: reduce) { .sk, .spinner, .btn-carregando::after { animation-duration: 3s; } }
 
   /* KPIs */
   .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
@@ -2482,10 +2499,11 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   async function mostrarView(v, animar = true) {
     if (v === viewAtual) return;
     viewAtual = v;
+    // Mostra a tela primeiro (com skeleton) e só depois espera os dados
+    Object.entries(VIEWS).forEach(([k, c]) => { document.getElementById(c.el).hidden = k !== v; });
     if (v === 'dashboard') await garantirDashboard();
     if (v === 'listas') renderListas();
     if (v === 'solicitacoes') { await garantirSolicitacoes(); renderGrid({ animar: animar && G.destaque == null }); }
-    Object.entries(VIEWS).forEach(([k, c]) => { document.getElementById(c.el).hidden = k !== v; });
     document.querySelectorAll('.sb-link[data-view]').forEach(a => {
       const on = a.dataset.view === (VIEWS[v].menu || v);
       a.classList.toggle('active', on);
@@ -2587,7 +2605,30 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     });
   }
   // ===================== Ligação com o Power Automate =====================
+  // ===== Loader: aparece em toda gravação/exclusão até o Power Automate responder =====
+  const LOADER_MSG = { criar: 'Salvando solicitação…', atualizar: 'Salvando alterações…', excluir: 'Excluindo…', listasCrud: 'Atualizando lista…' };
+  let loaderConta = 0, loaderBtn = null;
+  function loaderOn(msg) {
+    if (loaderConta++ === 0) {
+      const b = document.activeElement;
+      if (b && b.tagName === 'BUTTON') { loaderBtn = b; b.classList.add('btn-carregando'); b.setAttribute('aria-busy', 'true'); }
+    }
+    document.getElementById('loaderMsg').textContent = msg || 'Processando…';
+    const o = document.getElementById('loaderGlobal'); o.classList.add('on'); o.setAttribute('aria-hidden', 'false');
+  }
+  function loaderOff() {
+    if (--loaderConta > 0) return;
+    loaderConta = 0;
+    const o = document.getElementById('loaderGlobal'); o.classList.remove('on'); o.setAttribute('aria-hidden', 'true');
+    if (loaderBtn) { loaderBtn.classList.remove('btn-carregando'); loaderBtn.removeAttribute('aria-busy'); loaderBtn = null; }
+  }
   async function chamarFluxo(nome, metodo, corpo) {
+    const escrita = corpo !== undefined;
+    if (escrita) loaderOn(LOADER_MSG[nome]);
+    try { return await chamarFluxoBase(nome, metodo, corpo); }
+    finally { if (escrita) loaderOff(); }
+  }
+  async function chamarFluxoBase(nome, metodo, corpo) {
     const url = CONFIG.urls[nome];
     if (!url) throw new Error('URL do fluxo "' + nome + '" não configurada');
     // Escritas vão como POST text/plain (requisição "simples": o navegador não faz preflight OPTIONS, que o Power Automate não atende)
@@ -3182,8 +3223,21 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     }
     return JSON.parse(document.getElementById('dadosSolicitacoes').textContent).linhas;
   }
+  // Skeleton enquanto a primeira leitura não chega
+  function skeletonGrid() {
+    const corpo = document.getElementById('gBody'); if (!corpo) return;
+    const larg = [70, 60, 55, 80, 50, 60, 55, 40];
+    corpo.replaceChildren(...Array.from({ length: 6 }, () => h('tr', { class: 'sk-row' },
+      h('td', {}), ...larg.map(w => h('td', {}, h('span', { class: 'sk', style: 'width:' + w + '%' }), h('span', { class: 'sk', style: 'width:' + (w * .6) + '%;margin-top:6px;height:9px' }))), h('td', {}))));
+  }
+  function skeletonDash() {
+    const k = document.getElementById('kpis'), g = document.getElementById('dgrid');
+    if (k && !k.children.length) k.replaceChildren(h('span', { class: 'sk sk-kpi hero' }), ...Array.from({ length: 8 }, () => h('span', { class: 'sk sk-kpi' })));
+    if (g && !g.children.length) g.replaceChildren(...Array.from({ length: 4 }, () => h('span', { class: 'sk sk-card' })));
+  }
   async function garantirSolicitacoes() {
     if (SOL) return;
+    skeletonGrid(); skeletonDash();
     try { SOL = await carregarSolicitacoes(); }
     catch (e) { SOL = []; showToast('Falha ao carregar', 'Não foi possível ler as solicitações (' + e.message + ').', 'error'); }
     document.getElementById('solFonte').textContent = FONTE_DADOS.modo === 'api' ? 'Planilha' : 'Simulação · planilha Solicitacoes.xlsx';
@@ -3639,14 +3693,21 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
 
   // ===================== Inicialização =====================
   (async function iniciar() {
-    try { await carregarListas(); } catch (e) { showToast('Listas não carregadas', 'Não foi possível ler a aba Listas (' + e.message + ').', 'error'); }
-    await mostrarView(rota(), false);
+    // Listas e dados carregam em paralelo; a tela aparece na hora com skeleton
+    const pListas = carregarListas().then(ok => ok, e => { showToast('Listas não carregadas', 'Não foi possível ler a aba Listas (' + e.message + ').', 'error'); return false; });
     root.classList.remove('anim-intro');
+    await mostrarView(rota(), false);
+    if (await pListas) {
+      if (viewAtual === 'solicitacoes') renderGrid();
+      else if (viewAtual === 'dashboard') await montarDashboard(false);
+      else if (viewAtual === 'listas') renderListas();
+    }
     if (semAnimacao) return;
     play(document.querySelector('.sidebar'), { opacity: [0, 1], transform: ['translateX(-16px)', 'none'] }, { type: M.spring, bounce: .15, duration: .5 });
     animarView(viewAtual);
     if (viewAtual === 'dashboard') animarGraficos(document.getElementById('view-dashboard'), true);
   })();
 </script>
+<div class="loader-overlay" id="loaderGlobal" role="status" aria-live="polite" aria-hidden="true"><div class="loader-box"><span class="spinner"></span><span id="loaderMsg">Salvando…</span></div></div>
 </body>
 </html>
