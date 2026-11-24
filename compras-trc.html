@@ -2678,7 +2678,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const base = camposComuns(s);
     return s.centros.map((c, i) => {
       if (!c.idLinha) c.idLinha = uuid();
-      return Object.assign({ ID: c.idLinha }, base, { ItemRateio: (i + 1) + '/' + s.centros.length, CentroCusto: String(c.cc || ''), Percentual: txtNum(c.pct) });
+      return Object.assign({ ID: c.idLinha }, base, { ItemRateio: (i + 1) + ' de ' + s.centros.length /* "1 de N": "1/N" o Excel converte em data */, CentroCusto: String(c.cc || ''), Percentual: txtNum(c.pct) });
     });
   }
   // acao = salvar | atualizar | excluir. Em simulação não envia nada.
