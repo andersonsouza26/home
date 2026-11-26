@@ -998,7 +998,14 @@
   .vc-desc { max-width: 260px; }
   .vc-tab td:last-child { width: 46%; }
   .vc-chk { display: flex !important; justify-content: flex-start; gap: 8px; align-items: center; font-size: .85rem; margin-top: 6px; text-align: left; }
-  .vc-chk input { width: auto !important; flex: none; margin: 0; }
+  .vc-chk input[type="checkbox"], .fm-dlg input[type="checkbox"] { width: 18px !important; height: 18px; padding: 0; flex: none; margin: 0; accent-color: var(--primary); cursor: pointer; }
+  .vc-chk { cursor: pointer; font-weight: 500; }
+  .fm-dlg .qe-body > .field, .vc-dlg .field { min-width: 0; }
+  .fm-dlg datalist { display: none; }
+  .fm-det summary::marker { color: var(--text-muted); }
+  .fm-det[open] summary { border-bottom: 1px solid var(--border); }
+  .vc-tab .cs { min-width: 0; }
+  .vc-body > .cs { width: 100%; }
 
   .fm-dlg { width: min(760px, calc(100% - 32px)); }
   .fm-det { margin: 0 22px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -4101,7 +4108,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const linhas = n.itens.map(i => h('tr', {}, h('td', { text: i.item || '' }), h('td', { class: 'vc-desc', text: i.desc }), h('td', { class: 'num', text: i.vi != null ? fBRL(i.vi) : '' }),
       h('td', {}, h('select', { class: 'vc-sel', 'data-id': i.id }, opcoes(i.sc)))));
     const todos = h('select', { id: 'vcTodos' }, opcoes(n.scs.length === 1 ? n.scs[0] : null));
-    todos.addEventListener('change', () => vcDlg.querySelectorAll('.vc-sel').forEach(s => { s.value = todos.value; }));
+    todos.addEventListener('change', () => vcDlg.querySelectorAll('.vc-sel').forEach(s => { if (s.value !== todos.value) { s.value = todos.value; s.dispatchEvent(new Event('change')); } }));
     const lancar = h('input', { type: 'checkbox', id: 'vcLancar', checked: true });
     VC = { n };
     vcDlg.replaceChildren(h('form', { method: 'dialog' },
@@ -4114,6 +4121,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         h('label', { class: 'vc-chk' }, lancar, ' Lançar os dados da NF (nº, valor, emissão, fornecedor e frete TRC) na solicitação')),
       h('footer', { class: 'qe-foot' }, h('button', { type: 'button', class: 'btn btn-neutral', text: 'Cancelar', onclick: () => vcDlg.close() }),
         h('button', { type: 'button', class: 'btn btn-primary', id: 'vcSalvar', text: 'Salvar vínculo', onclick: salvarVinculo }))));
+    estilizar(vcDlg);
     vcDlg.showModal();
   }
   async function salvarVinculo() {
@@ -4180,6 +4188,15 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   document.body.append(fmDlg);
   const campo = (rot, el, obrig, larg = 6) => h('div', { class: 'field fm-f', style: 'grid-column: span ' + larg }, h('label', { text: rot + (obrig ? ' *' : '') }), el);
   const inp = (id, val, extra = {}) => h('input', Object.assign({ id, value: val == null ? '' : val, autocomplete: 'off' }, extra));
+  const ICON_CAL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  const campoDataEl = (id, iso) => h('div', { class: 'input-wrap date-wrap' }, inp(id, isoBR(iso || ''), { type: 'text', class: 'date', placeholder: 'dd/mm/aaaa', inputmode: 'numeric', maxlength: 10 }), h('button', { type: 'button', class: 'date-btn', tabindex: -1, 'aria-label': 'Abrir calendário', html: ICON_CAL }));
+  const campoMoedaEl = (id, v) => h('div', { class: 'input-wrap has-prefix' }, h('span', { class: 'prefix', text: 'R$' }), inp(id, v == null || v === '' ? '' : numParaMoeda(+v), { type: 'text', class: 'money-dk', placeholder: '0,00', inputmode: 'numeric' }));
+  function estilizar(root) {
+    root.querySelectorAll('select').forEach(sel => { if (sel.closest('.cs')) return; if (sel.options[0] && sel.options[0].value === '') sel.dataset.vazio = ''; enhanceSelect(sel); });
+    root.querySelectorAll('input.date').forEach(i => { if (!i.dataset.ok) { i.dataset.ok = 1; enhanceDate(i); } });
+    root.querySelectorAll('input.money-dk').forEach(i => { if (i.dataset.ok) return; i.dataset.ok = 1; i.addEventListener('input', () => { const d = i.value.replace(/\D/g, ''); i.value = d ? numParaMoeda(Number(d) / 100) : ''; }); });
+  }
+  const lerData = id => { const v = val(id); if (!v) return ''; return parseDate(v) ? brISO(v) : null; };
   function selSC(atual) {
     const lst = (SOL || []).filter(s => s.solicitacao || s.fluig).slice().sort((a, b) => (+b.solicitacao || 0) - (+a.solicitacao || 0));
     return h('select', { id: 'fmSC' }, h('option', { value: '', text: '— sem solicitação (vincular depois) —' }),
@@ -4201,6 +4218,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
           catch (e) { showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error'); }
           finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
         } }))));
+    estilizar(fmDlg);
     fmDlg.showModal();
   }
   const val = id => (fEl(id).value || '').trim();
@@ -4212,9 +4230,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const forn = listaPlanilha('tbListaFornecedor', 'Fornecedor').concat((DOCS ? DOCS.notas : []).map(x => x.fornecedor));
     const corpo = [
       campo('Nº NF', inp('fmNum', n && n.numero, { inputmode: 'numeric' }), 1, 3),
-      campo('Emissão', inp('fmEmi', n && n.emissao, { type: 'date' }), 1, 3),
-      campo('Data de entrega', inp('fmEnt', n && n.entrega, { type: 'date' }), 0, 3),
-      campo('Valor total da NF (R$)', inp('fmValor', n && valorBR(n.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 3),
+      campo('Emissão', campoDataEl('fmEmi', n && n.emissao), 1, 3),
+      campo('Data de entrega', campoDataEl('fmEnt', n && n.entrega), 0, 3),
+      campo('Valor total da NF', campoMoedaEl('fmValor', n && n.valor), 1, 3),
       campo('Fornecedor', inp('fmForn', n && n.fornecedor, { list: 'fmFornL' }), 1, 12), datalist('fmFornL', forn),
       (!edit || it0) ? campo('Descrição', inp('fmDesc', it0 && it0.desc), 1, 12) : h('p', { class: 'fm-nota', style: 'grid-column: span 12', text: 'Nota com ' + n.itens.length + ' itens: a descrição de cada item não é editada aqui.' }),
       edit ? null : campo('Solicitação (opcional)', selSC(''), 0, 12),
@@ -4231,15 +4249,16 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       campo('Observação', h('textarea', { id: 'fmObs', text: n ? n.obs : '' }), 0, 12)
     ].filter(Boolean);
     montarForm(edit ? 'Editar NF ' + n.numero : 'Nova nota fiscal', edit ? n.fornecedor : 'Campos com * são obrigatórios', corpo, detalhes, async () => {
-      const num = val('fmNum').replace(/^0+(?=\d)/, ''), emi = val('fmEmi'), forn = val('fmForn'), valor = lerValor(val('fmValor')), desc = fEl('fmDesc') ? val('fmDesc') : null;
+      const num = val('fmNum').replace(/^0+(?=\d)/, ''), emi = lerData('fmEmi'), ent = lerData('fmEnt'), forn = val('fmForn'), valor = moedaParaNum(val('fmValor')), desc = fEl('fmDesc') ? val('fmDesc') : null;
       if (!num || !emi || !forn || valor == null || (fEl('fmDesc') && !desc)) return 'Preencha os campos obrigatórios: Nº NF, emissão, fornecedor, descrição e valor.';
+      if (emi === null || ent === null) return 'Corrija a data (dd/mm/aaaa).';
       if (isNaN(valor) || valor <= 0) return 'Valor inválido.';
       const chave = val('fmChave').replace(/\D/g, '');
       if (chave && chave.length !== 44) return 'A chave da NF-e precisa ter 44 dígitos.';
       const dup = DOCS.notas.find(x => x.numero === num && norm(x.fornecedor) === norm(forn) && x !== n);
       if (dup) return 'Já existe a NF ' + num + ' desse fornecedor.';
       const qtd = fEl('fmQtd') ? lerValor(val('fmQtd')) : null;
-      const cab = { NumeroNF: num, Serie: val('fmSerie'), Modelo: fEl('fmModelo').value, DataEmissao: emi, DataEntrega: val('fmEnt'), Fornecedor: forn, CNPJFornecedor: val('fmCnpj'), ChaveNFe: chave, ValorTotalNF: String(valor), ArquivoPDF: val('fmArq'), Observacao: val('fmObs') };
+      const cab = { NumeroNF: num, Serie: val('fmSerie'), Modelo: fEl('fmModelo').value, DataEmissao: emi, DataEntrega: ent, Fornecedor: forn, CNPJFornecedor: val('fmCnpj'), ChaveNFe: chave, ValorTotalNF: String(valor), ArquivoPDF: val('fmArq'), Observacao: val('fmObs') };
       if (edit) {
         for (const i of n.itens) {
           const item = Object.assign({}, cab, it0 ? { DescricaoItem: desc, Quantidade: qtd == null ? '' : String(qtd), Unidade: val('fmUn'), ValorItem: String(valor), ValorUnitario: qtd ? String(Math.round(valor / qtd * 100) / 100) : '' } : {});
@@ -4272,14 +4291,14 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const corpo = [
       campo('Nota fiscal transportada', h('select', { id: 'ffNota' }, h('option', { value: '', text: '— escolha a NF —' }), notas.map(n => h('option', { value: n.k, selected: n.k === atualNota, text: n.numero + ' · ' + n.fornecedor.slice(0, 40) + ' · ' + isoBR(n.emissao) + (n.scs.length ? ' · SC ' + n.scs.join(', ') : '') }))), 1, 12),
       campo('Transportadora', inp('ffTransp', f && f.transp, { list: 'ffTranspL' }), 1, 12), datalist('ffTranspL', transp),
-      campo('Valor do frete (R$)', inp('ffValor', f && valorBR(f.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 6),
+      campo('Valor do frete', campoMoedaEl('ffValor', f && f.valor), 1, 6),
       campo('Tomador (quem paga)', h('select', { id: 'ffTom' }, [['TRC', 'TRC (entra no custo)'], ['Fornecedor (CIF)', 'Fornecedor (CIF)']].map(([v, t]) => h('option', { value: v, text: t, selected: f ? f.tomador === v : v === 'TRC' }))), 1, 6),
       edit ? null : h('label', { class: 'vc-chk', style: 'grid-column: span 12' }, h('input', { type: 'checkbox', id: 'ffLancar', checked: true }), ' Se o tomador for TRC e a NF tiver solicitação, somar o frete na solicitação')
     ];
     const detalhes = [
       campo('Nº CT-e', inp('ffNum', f && f.numero, { inputmode: 'numeric' }), 0, 4),
       campo('Série', inp('ffSerie', f && f.serie), 0, 2),
-      campo('Emissão', inp('ffEmi', f && f.emissao, { type: 'date' }), 0, 6),
+      campo('Emissão', campoDataEl('ffEmi', f && f.emissao), 0, 6),
       campo('CNPJ da transportadora', inp('ffCnpj', f && f.cnpj), 0, 6),
       campo('Remetente', inp('ffRem', f && f.remetente), 0, 6),
       campo('Chave CT-e (44 dígitos)', inp('ffChave', f && f.chave, { inputmode: 'numeric', maxlength: 44 }), 0, 12),
@@ -4287,12 +4306,13 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       campo('Observação', h('textarea', { id: 'ffObs', text: f ? f.obs : '' }), 0, 12)
     ];
     montarForm(edit ? 'Editar CT-e ' + (f.numero || '') : 'Novo frete (DACTE)', 'Campos com * são obrigatórios', corpo, detalhes, async () => {
-      const n = DOCS.notas.find(x => x.k === fEl('ffNota').value), transpV = val('ffTransp'), valor = lerValor(val('ffValor')), tom = fEl('ffTom').value;
+      const n = DOCS.notas.find(x => x.k === fEl('ffNota').value), transpV = val('ffTransp'), valor = moedaParaNum(val('ffValor')), tom = fEl('ffTom').value, emiF = lerData('ffEmi');
       if (!n || !transpV || valor == null) return 'Preencha os campos obrigatórios: nota fiscal, transportadora, valor e tomador.';
+      if (emiF === null) return 'Corrija a data (dd/mm/aaaa).';
       if (isNaN(valor) || valor <= 0) return 'Valor inválido.';
       const chave = val('ffChave').replace(/\D/g, '');
       if (chave && chave.length !== 44) return 'A chave do CT-e precisa ter 44 dígitos.';
-      const item = { NumeroCTe: val('ffNum'), Serie: val('ffSerie'), DataEmissao: val('ffEmi'), Transportadora: transpV, CNPJTransportadora: val('ffCnpj'), Remetente: val('ffRem') || n.fornecedor, Destinatario: 'TRC AGROFLORESTAL LTDA',
+      const item = { NumeroCTe: val('ffNum'), Serie: val('ffSerie'), DataEmissao: emiF, Transportadora: transpV, CNPJTransportadora: val('ffCnpj'), Remetente: val('ffRem') || n.fornecedor, Destinatario: 'TRC AGROFLORESTAL LTDA',
         Tomador: tom === 'TRC' ? 'TRC AGROFLORESTAL LTDA' : n.fornecedor, TomadorFrete: tom, ValorFrete: String(valor), ChaveCTe: chave, ChaveNFe: n.chave || '', NumeroNF: n.numero, NSolicitacao: n.scs.join(', '), StatusVinculo: 'Com NF', ArquivoPDF: val('ffArq'), Observacao: val('ffObs') };
       if (edit) {
         await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item });
