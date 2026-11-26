@@ -986,6 +986,20 @@
   .dk-tom.cif { background: var(--hover); color: var(--text-muted); }
   .gd .dk-it-sc { white-space: nowrap; }
 
+  .vc-dlg { width: min(980px, calc(100% - 32px)); }
+  .vc-body { padding: 8px 22px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .vc-lbl { font-size: .8rem; font-weight: 650; color: var(--text-muted); }
+  .vc-body select { width: 100%; }
+  .vc-hint { font-size: .78rem; color: var(--text-muted); margin: 0; }
+  .vc-tab { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: 4px; }
+  .vc-tab th { text-align: left; font-size: .68rem; text-transform: uppercase; color: var(--text-muted); padding: 6px; border-bottom: 1px solid var(--border); }
+  .vc-tab td { padding: 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .vc-tab .num { text-align: right; white-space: nowrap; }
+  .vc-desc { max-width: 260px; }
+  .vc-tab td:last-child { width: 46%; }
+  .vc-chk { display: flex !important; justify-content: flex-start; gap: 8px; align-items: center; font-size: .85rem; margin-top: 6px; text-align: left; }
+  .vc-chk input { width: auto !important; flex: none; margin: 0; }
+
   /* Cadastros (listas) */
   .ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ls-tab {
@@ -1385,7 +1399,7 @@
         <div class="grid-top"><div class="grid-sum" id="notasResumo" aria-live="polite"></div></div>
         <div class="grid-scroll">
           <table class="grid dk-grid" id="notasGrid">
-            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº NF</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="fornecedor">Fornecedor</button></th><th><button type="button" class="sort" data-sort="itens">Itens</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th><th><button type="button" class="sort" data-sort="frete">Frete</button></th></tr></thead>
+            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº NF</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="fornecedor">Fornecedor</button></th><th><button type="button" class="sort" data-sort="itens">Itens</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th><th><button type="button" class="sort" data-sort="frete">Frete</button></th><th class="g-acoes-h">Ações</th></tr></thead>
             <tbody id="notasBody"></tbody>
           </table>
         </div>
@@ -3907,7 +3921,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', { class: 'g-prod', title: x.itens.map(i => i.desc).join('\n') }, h('span', { class: 'clamp2', text: x.itens.length > 1 ? x.itens.length + ' itens: ' + x.itens.map(i => i.desc).join('; ') : (x.itens[0] && x.itens[0].desc) })),
       h('td', { class: 'num', text: fBRL(x.valor) }),
       h('td', {}, dkSc(x.scs)),
-      h('td', {}, x.fretes.length ? h('span', { class: 'dk-tom ' + (x.fretes.some(f => f.tomador === 'TRC') ? 'trc' : 'cif'), text: x.fretes.map(f => f.tomador === 'TRC' ? 'TRC' : 'CIF').join(' + ') }) : h('span', { class: 'muted', text: '—' })));
+      h('td', {}, x.fretes.length ? h('span', { class: 'dk-tom ' + (x.fretes.some(f => f.tomador === 'TRC') ? 'trc' : 'cif'), text: x.fretes.map(f => f.tomador === 'TRC' ? 'TRC' : 'CIF').join(' + ') }) : h('span', { class: 'muted', text: '—' })),
+      h('td', { class: 'g-acoes-c' }, h('div', { class: 'g-acoes' }, h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'vincular', 'aria-label': 'Vincular à solicitação', title: 'Vincular à solicitação', html: ICON_LINK }))));
     else tr.append(exp,
       h('td', { class: 'g-id' }, h('div', { text: x.numero }), h('div', { class: 'g-sub', text: x.serie ? 'série ' + x.serie : '' })),
       h('td', { text: isoBR(x.emissao) }),
@@ -3938,7 +3953,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('div', {}, h('h4', { text: 'Tomador' }), dl([['Tomador', x.tomadorNome], ['Classificação', x.tomador], ['Custo da TRC?', x.tomador === 'TRC' ? 'Sim, soma no custo' : 'Não (CIF)']])),
       h('div', {}, h('h4', { text: 'Nota e solicitação' }), dl([['NF', x.nf], ['Fornecedor da NF', x.nota && x.nota.fornecedor], ['Valor da NF', x.nota && fBRL(x.nota.valor)], ['SC', x.sc]])),
       x.obs ? h('div', { class: 'gd-wide', style: 'grid-column: span 4' }, h('h4', { text: 'Observação' }), h('p', { class: 'gd-obs', text: x.obs })) : null];
-    return h('tr', { class: 'g-detail', 'data-detalhe': x.k || x.id }, h('td', { colspan: 9 }, h('div', { class: 'gd' }, cards)));
+    return h('tr', { class: 'g-detail', 'data-detalhe': x.k || x.id }, h('td', { colspan: 10 }, h('div', { class: 'gd' }, cards)));
   }
   function renderDoc(v, animar = false) {
     if (!DOCS) return;
@@ -3978,6 +3993,105 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       if (st.abertos.has(x.k || x.id)) { st.abertos.delete(x.k || x.id); tr.classList.remove('open'); bt.setAttribute('aria-expanded', 'false'); const d = tr.nextElementSibling; if (d && d.classList.contains('g-detail')) d.remove(); }
       else { st.abertos.add(x.k || x.id); tr.classList.add('open'); bt.setAttribute('aria-expanded', 'true'); const det = dkDetalhe(v, x); tr.after(det); if (typeof play === 'function') play(det.querySelector('.gd'), { opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }, { duration: .3 }); }
     });
+  });
+
+  // ===================== Vínculo NF × Solicitação =====================
+  const ICON_LINK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  const STOP_VC = new Set(['para', 'com', 'sem', 'tipo', 'marca', 'servico', 'servicos', 'manutencao', 'pecas', 'material', 'unid', 'peca']);
+  const tokensVC = t => new Set(norm(t).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP_VC.has(w) && !/^\d+$/.test(w)));
+  const diasEntre = (a, b) => a && b ? Math.round((new Date(a) - new Date(b)) / 864e5) : null;
+  function sugestoesSC(n) {
+    const tk = new Set(); n.itens.forEach(i => tokensVC(i.desc).forEach(w => tk.add(w)));
+    const fn = norm(n.fornecedor).split(/\s+/)[0] || '';
+    return (SOL || []).filter(s => s.solicitacao || s.fluig).map(s => {
+      const ts = tokensVC(s.produtos); let hit = 0;
+      ts.forEach(w => { if (tk.has(w) || [...tk].some(x => x.length >= 5 && w.length >= 5 && (x.startsWith(w.slice(0, 5)) || w.startsWith(x.slice(0, 5))))) hit++; });
+      const lag = diasEntre(s.dataSolicitada, n.emissao); // SC - NF (dias)
+      const prazo = lag == null ? true : lag <= 7;
+      const forn = fn && norm(s.fornecedor).startsWith(fn) ? 1 : 0;
+      const score = (ts.size ? hit / ts.size : 0) * 2 + forn + (prazo ? .5 : -.5) + (s.nf ? -.3 : 0);
+      return { s, sc: scNum(s.solicitacao || s.fluig), hit, lag, prazo, score };
+    }).sort((a, b) => b.score - a.score || Math.abs(a.lag ?? 99) - Math.abs(b.lag ?? 99));
+  }
+  let VC = null;
+  const vcDlg = h('dialog', { class: 'qedit vc-dlg', 'aria-labelledby': 'vcTitle' });
+  document.body.append(vcDlg);
+  function rotuloSug(x) {
+    const s = x.s;
+    return (x.sc || '?') + ' · ' + isoBR(s.dataSolicitada) + ' · ' + (s.produtos || '').slice(0, 70) + ' · ' + (x.prazo ? '✔ até 7 dias' : '⚠ fora do prazo') + (s.nf ? ' · já tem NF ' + s.nf : '');
+  }
+  async function abrirVinculo(n) {
+    await garantirSolicitacoes();
+    const sug = sugestoesSC(n), top = sug.filter(x => x.hit > 0).slice(0, 15);
+    const resto = sug.filter(x => !top.includes(x)).sort((a, b) => (+b.sc || 0) - (+a.sc || 0));
+    const opcoes = atual => [h('option', { value: '', text: '— sem solicitação —' }),
+      h('optgroup', { label: 'Sugeridas (produto parecido)' }, top.map(x => h('option', { value: x.sc, text: rotuloSug(x), selected: x.sc === atual }))),
+      h('optgroup', { label: 'Todas as solicitações' }, resto.map(x => h('option', { value: x.sc, text: rotuloSug(x), selected: x.sc === atual })))];
+    const linhas = n.itens.map(i => h('tr', {}, h('td', { text: i.item || '' }), h('td', { class: 'vc-desc', text: i.desc }), h('td', { class: 'num', text: i.vi != null ? fBRL(i.vi) : '' }),
+      h('td', {}, h('select', { class: 'vc-sel', 'data-id': i.id }, opcoes(i.sc)))));
+    const todos = h('select', { id: 'vcTodos' }, opcoes(n.scs.length === 1 ? n.scs[0] : null));
+    todos.addEventListener('change', () => vcDlg.querySelectorAll('.vc-sel').forEach(s => { s.value = todos.value; }));
+    const lancar = h('input', { type: 'checkbox', id: 'vcLancar', checked: true });
+    VC = { n };
+    vcDlg.replaceChildren(h('form', { method: 'dialog' },
+      h('header', { class: 'qe-head' }, h('div', {}, h('h3', { id: 'vcTitle', text: 'Vincular NF ' + n.numero + ' à solicitação' }), h('p', { text: n.fornecedor + ' · ' + isoBR(n.emissao) + ' · ' + fBRL(n.valor) + (n.fretes.length ? ' · frete ' + n.fretes.map(f => (f.tomador === 'TRC' ? 'TRC ' : 'CIF ') + fBRL(f.valor)).join(' + ') : '') })),
+        h('button', { type: 'button', class: 'sb-icon-btn', 'aria-label': 'Fechar', onclick: () => vcDlg.close(), html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' })),
+      h('div', { class: 'vc-body' },
+        h('label', { class: 'vc-lbl', for: 'vcTodos', text: 'Mesma solicitação para todos os itens' }), todos,
+        h('p', { class: 'vc-hint', text: 'Regra: a NF pode ser emitida até 7 dias antes da solicitação (✔). Mais que isso aparece como ⚠ fora do prazo. Sugestões ordenadas por produto, fornecedor e data.' }),
+        h('table', { class: 'vc-tab' }, h('thead', {}, h('tr', {}, h('th', { text: 'Item' }), h('th', { text: 'Descrição' }), h('th', { class: 'num', text: 'Valor' }), h('th', { text: 'Solicitação' }))), h('tbody', {}, linhas)),
+        h('label', { class: 'vc-chk' }, lancar, ' Lançar os dados da NF (nº, valor, emissão, fornecedor e frete TRC) na solicitação')),
+      h('footer', { class: 'qe-foot' }, h('button', { type: 'button', class: 'btn btn-neutral', text: 'Cancelar', onclick: () => vcDlg.close() }),
+        h('button', { type: 'button', class: 'btn btn-primary', id: 'vcSalvar', text: 'Salvar vínculo', onclick: salvarVinculo }))));
+    vcDlg.showModal();
+  }
+  async function salvarVinculo() {
+    const n = VC.n, hoje = new Date().toISOString().slice(0, 10);
+    const novos = [...vcDlg.querySelectorAll('.vc-sel')].map(s => ({ id: s.dataset.id, sc: s.value }));
+    const mud = novos.filter(x => (n.itens.find(i => i.id === x.id) || {}).sc !== x.sc);
+    const lancar = fEl('vcLancar').checked;
+    if (!mud.length && !lancar) { vcDlg.close(); return; }
+    const bt = fEl('vcSalvar'); bt.disabled = true; bt.classList.add('btn-carregando');
+    try {
+      for (const x of mud) {
+        await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: x.id,
+          item: { NSolicitacao: x.sc, StatusVinculo: x.sc ? 'Vinculada' : 'Sem SC', DataVinculo: x.sc ? hoje : '', VinculadoPor: x.sc ? 'Compras TRC' : '' } });
+        const r = window.DOCS_PLANILHA.notas.find(y => y.ID === x.id);
+        if (r) Object.assign(r, { NSolicitacao: x.sc, StatusVinculo: x.sc ? 'Vinculada' : 'Sem SC', DataVinculo: x.sc ? hoje : '' });
+      }
+      const scs = [...new Set(novos.map(x => x.sc).filter(Boolean))];
+      for (const f of n.fretes) {
+        const v = scs.join(', ');
+        if ((f.sc || '') === v) continue;
+        await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { NSolicitacao: v } });
+        const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) r.NSolicitacao = v;
+      }
+      let lancadas = 0;
+      if (lancar) for (const sc of scs) {
+        const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === sc);
+        if (!s) continue;
+        const nfs = String(s.nf || '').split(/[,;]\s*/).filter(Boolean);
+        if (nfs.includes(n.numero)) continue;
+        const valorItens = novos.filter(x => x.sc === sc).reduce((a, x) => a + ((n.itens.find(i => i.id === x.id) || {}).vi || 0), 0);
+        const valor = scs.length === 1 ? n.valor : (valorItens || 0);
+        const freteTRC = scs.length === 1 ? n.fretes.filter(f => f.tomador === 'TRC').reduce((a, f) => a + f.valor, 0) : 0;
+        s.nf = nfs.concat(n.numero).join(', ');
+        s.valorNF = Math.round(((+s.valorNF || 0) + valor) * 100) / 100;
+        if (!s.fornecedor) s.fornecedor = n.fornecedor;
+        if (!s.dataEmissao) s.dataEmissao = n.emissao;
+        if (freteTRC) { s.valorFrete = Math.round(((+s.valorFrete || 0) + freteTRC) * 100) / 100; if (!s.transportador) s.transportador = n.fretes.find(f => f.tomador === 'TRC').transp; }
+        await apiGravar('atualizar', s); lancadas++;
+      }
+      DOCS = null; await garantirDocs(); renderDoc('notas'); if (viewAtual === 'fretes') renderDoc('fretes');
+      vcDlg.close();
+      showToast('Vínculo salvo', 'NF ' + n.numero + (scs.length ? ' → SC ' + scs.join(', ') : ' sem solicitação') + (lancadas ? ' · dados lançados em ' + lancadas + ' solicitação(ões)' : ''));
+    } catch (e) {
+      showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error');
+    } finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
+  }
+  fEl('notasBody').addEventListener('click', e => {
+    const bt = e.target.closest('[data-acao="vincular"]'); if (!bt) return;
+    const k = bt.closest('tr.g-row').dataset.k, n = DOCS.notas.find(y => y.k === k); if (n) abrirVinculo(n);
   });
 
   // ===================== Inicialização =====================
