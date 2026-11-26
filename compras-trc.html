@@ -1280,7 +1280,6 @@
             <option value="PC Aprovado no prazo" data-color="#e87ba4">PC Aprovado no prazo</option>
             <option value="PC Aprovado em atraso" data-color="#d97706">PC Aprovado em atraso</option>
             <option value="Finalizado" data-color="#0ea5a4">Finalizado</option>
-            <option value="Entregue" data-color="#008300">Entregue</option>
             <option value="Cancelado" data-color="#e34948">Cancelado</option>
           </select>
         </div>
@@ -1559,7 +1558,6 @@
             <option data-color="#e87ba4">PC Aprovado no prazo</option>
             <option data-color="#d97706">PC Aprovado em atraso</option>
             <option data-color="#0ea5a4">Finalizado</option>
-            <option data-color="#008300">Entregue</option>
             <option data-color="#e34948">Cancelado</option>
           </select>
         </div>
@@ -1757,7 +1755,6 @@
           <option value="PC Aprovado no prazo" data-color="#e87ba4">PC Aprovado no prazo</option>
           <option value="PC Aprovado em atraso" data-color="#d97706">PC Aprovado em atraso</option>
           <option value="Finalizado" data-color="#0ea5a4">Finalizado</option>
-          <option value="Entregue" data-color="#008300">Entregue</option>
           <option value="Cancelado" data-color="#e34948">Cancelado</option>
         </select>
       </div>
@@ -2862,11 +2859,11 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const fMes = iso => { const [y, m] = String(iso).split('-'); return MESES_ABREV[+m - 1] + '/' + y.slice(2); };
   const fMesLongo = iso => { const [y, m] = String(iso).split('-'); return MESES[+m - 1] + ' de ' + y; };
   const plural = (n, s, p) => fInt(n) + ' ' + (n === 1 ? s : p);
-  // Status iguais aos do Fluig + Entregue (status final). Espelhado em Listas › tbListaStatus.
-  const STATUS_LISTA = ['Indefinido', 'Em Processo de Cotação no prazo', 'PC Aguardando Aprovação em atraso', 'PC Aprovado no prazo', 'PC Aprovado em atraso', 'Finalizado', 'Entregue', 'Cancelado'];
-  const COR_STATUS = new Proxy({ 'Indefinido': '#94a3b8', 'Em Processo de Cotação no prazo': '#2a78d6', 'PC Aguardando Aprovação em atraso': '#eda100', 'PC Aprovado no prazo': '#e87ba4', 'PC Aprovado em atraso': '#d97706', 'Finalizado': '#0ea5a4', 'Entregue': '#008300', 'Cancelado': '#e34948' }, { get: (o, k) => o[k] || '#94a3b8' });
+  // Status iguais aos do Fluig (Finalizado é o status final). Espelhado em Listas › tbListaStatus.
+  const STATUS_LISTA = ['Indefinido', 'Em Processo de Cotação no prazo', 'PC Aguardando Aprovação em atraso', 'PC Aprovado no prazo', 'PC Aprovado em atraso', 'Finalizado', 'Cancelado'];
+  const COR_STATUS = new Proxy({ 'Indefinido': '#94a3b8', 'Em Processo de Cotação no prazo': '#2a78d6', 'PC Aguardando Aprovação em atraso': '#eda100', 'PC Aprovado no prazo': '#e87ba4', 'PC Aprovado em atraso': '#d97706', 'Finalizado': '#0ea5a4', 'Cancelado': '#e34948' }, { get: (o, k) => o[k] || '#94a3b8' });
   const STATUS_ABERTO = ['Indefinido', 'Em Processo de Cotação no prazo', 'PC Aguardando Aprovação em atraso', 'PC Aprovado no prazo', 'PC Aprovado em atraso'];
-  const STATUS_CONCLUIDO = ['Finalizado', 'Entregue'];
+  const STATUS_CONCLUIDO = ['Finalizado'];
 
   // Cria elementos com texto seguro (textContent); 'html' só é usado para ícones fixos do próprio arquivo
   function h(tag, props, ...kids) {
@@ -3474,13 +3471,13 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     nav.replaceChildren(...itens);
   }
 
-  const FINAIS_SOL = ['Entregue', 'Finalizado', 'Cancelado'];
+  const FINAIS_SOL = ['Finalizado', 'Cancelado'];
   function solKpis(base) {
     const soma = a => a.reduce((t, s) => t + (valorTotalSol(s) || 0), 0);
     const grupos = [
       ['Solicitações', null, null, ''],
       ['Em aberto', '#2a78d6', s => !FINAIS_SOL.includes(s.status), ''],
-      ['Concluídas', '#16a34a', s => s.status === 'Entregue' || s.status === 'Finalizado', ''],
+      ['Finalizadas', '#0ea5a4', s => s.status === 'Finalizado', ''],
       ['Aguardando NF', '#eda100', s => s.status !== 'Cancelado' && !s.nf, ''],
       ['Canceladas', '#e34948', s => s.status === 'Cancelado', '']
     ];
