@@ -2860,9 +2860,17 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       opts.body = JSON.stringify(Object.assign({ chave: CONFIG.apiKey }, corpo));
     }
     let r;
+    // Tempo-limite: sem resposta em 100 s, aborta e avisa (a gravação pode ter acontecido mesmo assim)
+    const ctrl = new AbortController(), tLim = setTimeout(() => ctrl.abort(), 100000);
+    opts.signal = ctrl.signal;
     try {
       r = await fetch(url, opts);
-    } catch (e) { console.error('[fluxo ' + nome + ']', e); throw new Error('sem conexão'); }
+    } catch (e) {
+      console.error('[fluxo ' + nome + ']', e);
+      if (e.name === 'AbortError') throw new Error(corpo !== undefined ? 'a planilha não respondeu em 100 s. A gravação pode ter sido feita: atualize a página e confira antes de repetir' : 'a planilha não respondeu em 100 s');
+      throw new Error('sem conexão');
+    } finally { clearTimeout(tLim); }
+    if (r.status === 504 && corpo !== undefined) throw new Error('tempo esgotado no Power Automate (504). A gravação pode ter sido feita: atualize a página e confira antes de repetir');
     if (!r.ok) { console.error('[fluxo ' + nome + '] HTTP ' + r.status, await r.text().catch(() => '')); throw new Error('HTTP ' + r.status); }
     const txt = await r.text();
     try { return txt ? JSON.parse(txt) : null; } catch (e) { return txt; }
@@ -3985,7 +3993,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   let DOCS = null;
   const DK = { notas: { ordem: 'emissao', dir: -1, pagina: 1, tamanho: 15, abertos: new Set(), kpi: null }, fretes: { ordem: 'emissao', dir: -1, pagina: 1, tamanho: 15, abertos: new Set(), kpi: null } };
   const num = v => v === '' || v == null ? null : +String(v).replace(',', '.');
-  const isoDia = v => v ? String(v).slice(0, 10) : '';
+  // Datas: ISO do fluxo ou número serial do Excel (coluna sem formato de data, ex.: 46352)
+  const isoDia = v => { if (!v) return ''; const t = String(v).trim(); if (/^\d{5}(\.\d+)?$/.test(t)) return new Date(Date.UTC(1899, 11, 30) + Math.floor(+t) * 864e5).toISOString().slice(0, 10); return t.slice(0, 10); };
   const scNum = v => String(v || '').replace(/^0+/, '');
   const ST_CLASSE = { 'Vinculada': 'vinculada', 'Parcial': 'parcial', 'Sem SC': 'semsc', 'Com NF': 'vinculada', 'Sem NF': 'semsc' };
   async function garantirDocs() {
@@ -4349,6 +4358,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         await recarregarDocs(); showToast('Nota atualizada', 'NF ' + num + ' salva na planilha.'); return;
       }
       const sc = fEl('fmSC').value;
+      // Confere na planilha (dados frescos) se a NF já foi gravada, p.ex. numa tentativa anterior que demorou
+      const fresco = await chamarFluxo('listas', 'GET');
+      const jaExiste = ((fresco && fresco.tbNotas) || []).find(r => String(r.NumeroNF).replace(/^0+/, '') === num && norm(r.Fornecedor).slice(0, 8) === norm(forn).slice(0, 8));
+      if (jaExiste) { window.DOCS_PLANILHA.notas = fresco.tbNotas; window.DOCS_PLANILHA.fretes = fresco.tbFretes || window.DOCS_PLANILHA.fretes; await recarregarDocs(); return 'A NF ' + num + ' desse fornecedor já está na planilha (provavelmente gravada numa tentativa anterior). A lista foi atualizada: use editar ou vincular nela.'; }
       const item = Object.assign({ ID: novoIdDoc('NF'), ItemNF: '1 de 1', DescricaoItem: desc, Quantidade: qtd == null ? '' : String(qtd), Unidade: val('fmUn'), ValorUnitario: qtd ? String(Math.round(valor / qtd * 100) / 100) : '', ValorItem: String(valor),
         NSolicitacao: sc, StatusVinculo: sc ? 'Vinculada' : 'Sem SC', DataVinculo: sc ? hojeISO() : '', VinculadoPor: sc ? 'Compras TRC' : '', DataCadastro: hojeISO() }, cab);
       await chamarFluxo('listasCrud', 'POST', { acao: 'criar', tabela: 'tbNotas', item });
@@ -4396,6 +4409,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) Object.assign(r, item);
         await recarregarDocs(); showToast('Frete atualizado', 'CT-e salvo na planilha.'); return;
       }
+      const fresco = await chamarFluxo('listas', 'GET');
+      const jaExiste = ((fresco && fresco.tbFretes) || []).find(r => String(r.NumeroNF) === n.numero && norm(r.Transportadora).slice(0, 8) === norm(transpV).slice(0, 8) && Math.abs((+r.ValorFrete || 0) - valor) < .01);
+      if (jaExiste) { window.DOCS_PLANILHA.fretes = fresco.tbFretes; await recarregarDocs(); return 'Esse frete (NF ' + n.numero + ', ' + transpV + ', ' + fBRL(valor) + ') já está na planilha, provavelmente de uma tentativa anterior. A lista foi atualizada.'; }
       Object.assign(item, { ID: novoIdDoc('CT'), DataCadastro: hojeISO() });
       await chamarFluxo('listasCrud', 'POST', { acao: 'criar', tabela: 'tbFretes', item });
       window.DOCS_PLANILHA.fretes.push(item);
