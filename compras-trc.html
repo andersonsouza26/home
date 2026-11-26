@@ -373,6 +373,7 @@
     transition: transform .25s, opacity .25s;
   }
   .toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .toast[popover] { inset: auto 20px 20px auto; margin: 0; overflow: visible; color: var(--text); }
   .toast-icon {
     width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
     display: grid; place-items: center;
@@ -387,7 +388,7 @@
   }
   .toast-close:hover { background: var(--hover); color: var(--text); }
   .toast.error .toast-icon { background: var(--danger-soft); color: var(--danger); }
-  @media (max-width: 600px) { .toast { right: 16px; bottom: 16px; } }
+  @media (max-width: 600px) { .toast { right: 16px; bottom: 16px; } .toast[popover] { inset: auto 16px 16px auto; } }
 
   /* ===== Centro de Custo / Rateio ===== */
   .col-9 { grid-column: span 9; }
@@ -2566,13 +2567,21 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     document.getElementById('toastMsg').textContent = msg;
     toast.classList.toggle('error', tipo === 'error');
     toast.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    // Fica por cima de qualquer diálogo aberto: o toast entra na top layer (popover) e é reaberto a cada aviso
+    if (toast.showPopover) { try { if (toast.matches(':popover-open')) toast.hidePopover(); toast.showPopover(); } catch (e) { } }
     toast.classList.add('show');
     play(toast, { opacity: [0, 1], transform: ['translateY(18px) scale(.95)', 'none'] }, { type: M && M.spring, bounce: .35, duration: .5 });
     play(document.getElementById('toastIcon'), { transform: ['scale(.3)', 'scale(1)'] }, { type: M && M.spring, bounce: .6, duration: .55, delay: .08 });
     clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove('show'), tipo === 'error' ? 4500 : 3000);
+    toast._timer = setTimeout(esconderToast, tipo === 'error' ? 4500 : 3000);
   }
-  document.getElementById('toastClose').addEventListener('click', () => toast.classList.remove('show'));
+  function esconderToast() {
+    toast.classList.remove('show');
+    clearTimeout(toast._pop);
+    toast._pop = setTimeout(() => { if (!toast.classList.contains('show') && toast.hidePopover) { try { toast.hidePopover(); } catch (e) { } } }, 400);
+  }
+  if (toast.showPopover) toast.setAttribute('popover', 'manual');
+  document.getElementById('toastClose').addEventListener('click', esconderToast);
   // ===== Campos obrigatórios (seções 1 e 2) =====
   const OBRIGATORIOS = ['solicitante', 'dataSolicitada', 'status', 'comprador', 'classificacao',
                         'produtosServicos', 'rateio', 'naturezaOperacao', 'aplicacao'];
