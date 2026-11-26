@@ -977,7 +977,7 @@
   .dk-grid tr.g-row td.dk-faixa { padding: 0; width: 6px; min-width: 6px; }
   .dk-grid tr.g-row td.dk-faixa + td { padding-left: 8px; }
   .dk-st-vinculada { --st: #16a34a; } .dk-st-parcial { --st: #eda100; } .dk-st-semsc { --st: #e34948; }
-  .dk-grid tr.g-row > td:first-child { box-shadow: inset 5px 0 0 var(--st, transparent); }
+  .dk-grid tr.g-row > td:first-child, #grid tr.g-row > td:first-child { box-shadow: inset 5px 0 0 var(--st, transparent); }
   .dk-sc { display: inline-flex; gap: 4px; flex-wrap: wrap; }
   .dk-sc b { font-size: .76rem; font-weight: 650; padding: 2px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); }
   .dk-sc .nao { background: var(--danger-soft); color: var(--danger); }
@@ -1260,6 +1260,7 @@
           </a>
         </div>
       </header>
+      <section class="kpis dk-kpis" id="solKpis" aria-label="Resumo"></section>
 
       <section class="filters" aria-label="Filtros">
         <div class="f-field f-busca">
@@ -2620,7 +2621,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   // ===================== Navegação entre telas =====================
   const VIEWS = {
     dashboard: { el: 'view-dashboard', titulo: 'Dashboard', itens: '.view-head, .kpi, .dcard' },
-    solicitacoes: { el: 'view-solicitacoes', titulo: 'Solicitações', itens: '.view-head, .filters, .grid-card' },
+    solicitacoes: { el: 'view-solicitacoes', titulo: 'Solicitações', itens: '.view-head, .kpis, .filters, .grid-card' },
     notas: { el: 'view-notas', titulo: 'Notas Fiscais', itens: '.view-head, .kpis, .filters, .grid-card' },
     fretes: { el: 'view-fretes', titulo: 'Fretes (DACTE)', itens: '.view-head, .kpis, .filters, .grid-card' },
     listas: { el: 'view-listas', titulo: 'Cadastros', itens: '.view-head, .ls-tabs, .filters, .grid-card' },
@@ -3427,7 +3428,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   }
   function linhaGrid(s) {
     const aberto = G.abertos.has(s.id), vt = valorTotalSol(s);
-    return h('tr', { class: 'g-row' + (aberto ? ' open' : ''), 'data-id': s.id },
+    return h('tr', { class: 'g-row' + (aberto ? ' open' : ''), 'data-id': s.id, style: '--st:' + (COR_STATUS[s.status] || 'transparent'), title: s.status },
       h('td', { class: 'g-exp-c' }, h('button', { type: 'button', class: 'ibtn exp', 'data-acao': 'ver', 'aria-expanded': aberto, 'aria-label': 'Ver detalhes', title: 'Ver detalhes', html: ICON_G.chev })),
       h('td', { class: 'g-id', 'data-label': 'Nº Fluig / Solicitação' },
         h('div', {}, s.fluig ? 'Fluig ' + s.fluig : h('span', { class: 'muted', text: 'Fluig —' })),
@@ -3473,9 +3474,28 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     nav.replaceChildren(...itens);
   }
 
+  const FINAIS_SOL = ['Entregue', 'Finalizado', 'Cancelado'];
+  function solKpis(base) {
+    const soma = a => a.reduce((t, s) => t + (valorTotalSol(s) || 0), 0);
+    const grupos = [
+      ['Solicitações', null, null, ''],
+      ['Em aberto', '#2a78d6', s => !FINAIS_SOL.includes(s.status), ''],
+      ['Concluídas', '#16a34a', s => s.status === 'Entregue' || s.status === 'Finalizado', ''],
+      ['Aguardando NF', '#eda100', s => s.status !== 'Cancelado' && !s.nf, ''],
+      ['Canceladas', '#e34948', s => s.status === 'Cancelado', '']
+    ];
+    return grupos.map(([rot, cor, f, sub]) => {
+      const L = f ? base.filter(f) : base, on = G.kpiRot === rot;
+      return h('div', { class: 'kpi' + (on ? ' on' : ''), role: 'button', tabindex: 0, title: 'Filtrar', onclick: () => { G.kpi = on || !f ? null : f; G.kpiRot = on || !f ? null : rot; G.pagina = 1; renderGrid({ animar: true }); } },
+        h('div', { class: 'kpi-label' }, h('span', { class: 'kpi-ic', style: cor ? 'background:' + cor + '22;color:' + cor : '', text: '●' }), rot),
+        h('div', { class: 'kpi-value', text: fInt(L.length) }), h('div', { class: 'kpi-sub', text: fBRL(soma(L)) + (sub ? ' · ' + sub : '') }));
+    });
+  }
   function renderGrid({ animar = false } = {}) {
     if (!SOL) return;
-    const lista = filtrar();
+    const base = filtrar();
+    fEl('solKpis').replaceChildren(...solKpis(base));
+    const lista = G.kpi ? base.filter(G.kpi) : base;
     const f = ORDEM[G.ordem];
     lista.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * G.dir || (b.id - a.id); });
     const paginas = Math.max(1, Math.ceil(lista.length / G.tamanho));
@@ -3518,6 +3538,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     fEl('fDe').classList.remove('invalid'); fEl('fAte').classList.remove('invalid');
     ['fStatus', 'fComprador', 'fRateio'].forEach(id => { fEl(id).value = '*'; fEl(id).dispatchEvent(new Event('change')); });
     limpandoFiltros = false;
+    G.kpi = null; G.kpiRot = null;
     aplicarFiltros();
   }
   fEl('fLimpar').addEventListener('click', limparFiltros);
