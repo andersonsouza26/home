@@ -968,6 +968,24 @@
 
   .page-header .btn { flex-shrink: 0; }
 
+  /* Notas e Fretes */
+  .dk-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .dk-kpis .kpi { cursor: pointer; transition: border-color .15s, transform .15s; }
+  .dk-kpis .kpi:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .dk-kpis .kpi.on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+  .dk-kpis .kpi-value { font-size: 1.4rem; }
+  .dk-grid tr.g-row td.dk-faixa { padding: 0; width: 6px; min-width: 6px; }
+  .dk-grid tr.g-row td.dk-faixa + td { padding-left: 8px; }
+  .dk-st-vinculada { --st: #16a34a; } .dk-st-parcial { --st: #eda100; } .dk-st-semsc { --st: #e34948; }
+  .dk-grid tr.g-row > td:first-child { box-shadow: inset 5px 0 0 var(--st, transparent); }
+  .dk-sc { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .dk-sc b { font-size: .76rem; font-weight: 650; padding: 2px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); }
+  .dk-sc .nao { background: var(--danger-soft); color: var(--danger); }
+  .dk-tom { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+  .dk-tom.trc { background: var(--primary-soft); color: var(--primary); }
+  .dk-tom.cif { background: var(--hover); color: var(--text-muted); }
+  .gd .dk-it-sc { white-space: nowrap; }
+
   /* Cadastros (listas) */
   .ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ls-tab {
@@ -1130,6 +1148,14 @@
     <a class="sb-link" href="#solicitacoes" data-view="solicitacoes" title="Solicitações">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="sb-text">Solicitações</span>
+    </a>
+    <a class="sb-link" href="#notas" data-view="notas" title="Notas Fiscais">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      <span class="sb-text">Notas Fiscais</span>
+    </a>
+    <a class="sb-link" href="#fretes" data-view="fretes" title="Fretes (DACTE)">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <span class="sb-text">Fretes (DACTE)</span>
     </a>
     <div class="sb-section">Configuração</div>
     <a class="sb-link" href="#listas" data-view="listas" title="Cadastros (listas)">
@@ -1319,6 +1345,103 @@
           <span id="gInfo"></span>
           <nav class="pager" id="gPager" aria-label="Paginação"></nav>
         </footer>
+      </section>
+    </div>
+  </section>
+
+
+  <!-- ===== Tela: Notas Fiscais ===== -->
+  <section class="view" id="view-notas" hidden>
+    <div class="container wide">
+      <header class="view-head">
+        <div>
+          <h1>Notas Fiscais</h1>
+          <p>Notas lançadas na aba Notas · verde = vinculada, amarelo = parcial, vermelho = sem solicitação</p>
+        </div>
+      </header>
+      <section class="kpis dk-kpis" id="notasKpis" aria-label="Resumo"></section>
+      <section class="filters" aria-label="Filtros">
+        <div class="f-field f-busca">
+          <label for="notasBusca">Buscar</label>
+          <div class="input-wrap has-icon">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="notasBusca" placeholder="Nº NF, fornecedor, item, SC…" autocomplete="off">
+          </div>
+        </div>
+        <div class="f-field"><label for="notasStatus">Vínculo</label><select id="notasStatus"><option value="*" selected>Todos</option><option value="Vinculada" data-color="#16a34a">Vinculada</option><option value="Parcial" data-color="#eda100">Parcial / sugerida</option><option value="Sem SC" data-color="#e34948">Sem SC</option></select></div><div class="f-field"><label for="notasForn">Fornecedor</label><select id="notasForn"><option value="*" selected>Todos</option></select></div>
+        <div class="f-field">
+          <label for="notasDe">Emissão de</label>
+          <div class="input-wrap date-wrap"><input type="text" id="notasDe" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div>
+        </div>
+        <div class="f-field">
+          <label for="notasAte">Emissão até</label>
+          <div class="input-wrap date-wrap"><input type="text" id="notasAte" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div>
+        </div>
+        <div class="f-field f-acao">
+          <button type="button" class="btn btn-neutral" id="notasLimpar">Limpar filtros</button>
+        </div>
+      </section>
+      <section class="grid-card" aria-label="Lista">
+        <div class="grid-top"><div class="grid-sum" id="notasResumo" aria-live="polite"></div></div>
+        <div class="grid-scroll">
+          <table class="grid dk-grid" id="notasGrid">
+            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº NF</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="fornecedor">Fornecedor</button></th><th><button type="button" class="sort" data-sort="itens">Itens</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th><th><button type="button" class="sort" data-sort="frete">Frete</button></th></tr></thead>
+            <tbody id="notasBody"></tbody>
+          </table>
+        </div>
+        <div class="grid-empty" id="notasVazio" hidden>
+          <h4>Nenhum registro encontrado</h4>
+          <p>Ajuste a busca ou os filtros.</p>
+        </div>
+        <footer class="grid-foot"><span id="notasInfo"></span><nav class="pager" id="notasPager" aria-label="Paginação"></nav></footer>
+      </section>
+    </div>
+  </section>
+
+  <!-- ===== Tela: Fretes (DACTE) ===== -->
+  <section class="view" id="view-fretes" hidden>
+    <div class="container wide">
+      <header class="view-head">
+        <div>
+          <h1>Fretes (DACTE)</h1>
+          <p>CT-es lançados na aba Fretes · verde = ligado a uma NF, vermelho = sem NF</p>
+        </div>
+      </header>
+      <section class="kpis dk-kpis" id="fretesKpis" aria-label="Resumo"></section>
+      <section class="filters" aria-label="Filtros">
+        <div class="f-field f-busca">
+          <label for="fretesBusca">Buscar</label>
+          <div class="input-wrap has-icon">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="fretesBusca" placeholder="Nº CT-e, transportadora, NF, SC…" autocomplete="off">
+          </div>
+        </div>
+        <div class="f-field"><label for="fretesStatus">Vínculo</label><select id="fretesStatus"><option value="*" selected>Todos</option><option value="Com NF" data-color="#16a34a">Com NF</option><option value="Sem NF" data-color="#e34948">Sem NF</option></select></div><div class="f-field"><label for="fretesTomador">Tomador</label><select id="fretesTomador"><option value="*" selected>Todos</option><option value="TRC">TRC (custo)</option><option value="Fornecedor (CIF)">Fornecedor (CIF)</option></select></div><div class="f-field"><label for="fretesTransp">Transportadora</label><select id="fretesTransp"><option value="*" selected>Todos</option></select></div>
+        <div class="f-field">
+          <label for="fretesDe">Emissão de</label>
+          <div class="input-wrap date-wrap"><input type="text" id="fretesDe" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div>
+        </div>
+        <div class="f-field">
+          <label for="fretesAte">Emissão até</label>
+          <div class="input-wrap date-wrap"><input type="text" id="fretesAte" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off"><button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button></div>
+        </div>
+        <div class="f-field f-acao">
+          <button type="button" class="btn btn-neutral" id="fretesLimpar">Limpar filtros</button>
+        </div>
+      </section>
+      <section class="grid-card" aria-label="Lista">
+        <div class="grid-top"><div class="grid-sum" id="fretesResumo" aria-live="polite"></div></div>
+        <div class="grid-scroll">
+          <table class="grid dk-grid" id="fretesGrid">
+            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº CT-e</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="transp">Transportadora</button></th><th><button type="button" class="sort" data-sort="tomador">Tomador</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="nf">NF</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th></tr></thead>
+            <tbody id="fretesBody"></tbody>
+          </table>
+        </div>
+        <div class="grid-empty" id="fretesVazio" hidden>
+          <h4>Nenhum registro encontrado</h4>
+          <p>Ajuste a busca ou os filtros.</p>
+        </div>
+        <footer class="grid-foot"><span id="fretesInfo"></span><nav class="pager" id="fretesPager" aria-label="Paginação"></nav></footer>
       </section>
     </div>
   </section>
@@ -2484,6 +2607,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const VIEWS = {
     dashboard: { el: 'view-dashboard', titulo: 'Dashboard', itens: '.view-head, .kpi, .dcard' },
     solicitacoes: { el: 'view-solicitacoes', titulo: 'Solicitações', itens: '.view-head, .filters, .grid-card' },
+    notas: { el: 'view-notas', titulo: 'Notas Fiscais', itens: '.view-head, .kpis, .filters, .grid-card' },
+    fretes: { el: 'view-fretes', titulo: 'Fretes (DACTE)', itens: '.view-head, .kpis, .filters, .grid-card' },
     listas: { el: 'view-listas', titulo: 'Cadastros', itens: '.view-head, .ls-tabs, .filters, .grid-card' },
     cadastro: { el: 'view-cadastro', titulo: 'Nova Solicitação', menu: 'solicitacoes', itens: '.page-header, #formCadastro .card, .actions' }
   };
@@ -2503,6 +2628,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     Object.entries(VIEWS).forEach(([k, c]) => { document.getElementById(c.el).hidden = k !== v; });
     if (v === 'dashboard') await garantirDashboard();
     if (v === 'listas') renderListas();
+    if (v === 'notas' || v === 'fretes') { await garantirDocs(); renderDoc(v); }
     if (v === 'solicitacoes') { await garantirSolicitacoes(); renderGrid({ animar: animar && G.destaque == null }); }
     document.querySelectorAll('.sb-link[data-view]').forEach(a => {
       const on = a.dataset.view === (VIEWS[v].menu || v);
@@ -2657,7 +2783,11 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   // Lê a aba Listas. Modo 'simulacao' não traz listas.
   async function carregarListas() {
     if (FONTE_DADOS.modo !== 'api') return false;
-    window.LISTAS_PLANILHA = comoTabelas(await chamarFluxo('listas', 'GET'));
+    const bruto = await chamarFluxo('listas', 'GET');
+    window.DOCS_PLANILHA = { notas: (bruto && bruto.tbNotas) || [], fretes: (bruto && bruto.tbFretes) || [] };
+    if (bruto) { delete bruto.tbNotas; delete bruto.tbFretes; }
+    window.LISTAS_PLANILHA = comoTabelas(bruto);
+    DOCS = null;
     preencherListas();
     return true;
   }
@@ -3691,6 +3821,165 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     showToast('Item excluído', '"' + chave + '" removido de ' + d.nome + '.');
   });
 
+  // ===================== Notas Fiscais e Fretes (abas Notas / Fretes) =====================
+  let DOCS = null;
+  const DK = { notas: { ordem: 'emissao', dir: -1, pagina: 1, tamanho: 15, abertos: new Set(), kpi: null }, fretes: { ordem: 'emissao', dir: -1, pagina: 1, tamanho: 15, abertos: new Set(), kpi: null } };
+  const num = v => v === '' || v == null ? null : +String(v).replace(',', '.');
+  const isoDia = v => v ? String(v).slice(0, 10) : '';
+  const scNum = v => String(v || '').replace(/^0+/, '');
+  const ST_CLASSE = { 'Vinculada': 'vinculada', 'Parcial': 'parcial', 'Sem SC': 'semsc', 'Com NF': 'vinculada', 'Sem NF': 'semsc' };
+  async function garantirDocs() {
+    if (!window.DOCS_PLANILHA) { try { await carregarListas(); } catch (e) { showToast('Falha ao carregar', 'Notas e fretes não carregaram (' + e.message + ').', 'error'); return; } }
+    if (DOCS) return;
+    const P = window.DOCS_PLANILHA || { notas: [], fretes: [] };
+    const mapa = new Map();
+    P.notas.forEach(r => {
+      const k = (r.NumeroNF || '') + '|' + (r.CNPJFornecedor || r.Fornecedor || '');
+      if (!mapa.has(k)) mapa.set(k, { k, numero: r.NumeroNF || '', serie: r.Serie || '', modelo: r.Modelo || '', chave: r.ChaveNFe || '', emissao: isoDia(r.DataEmissao), fornecedor: r.Fornecedor || '', cnpj: r.CNPJFornecedor || '', valor: num(r.ValorTotalNF) || 0, arquivo: r.ArquivoPDF || '', obs: r.Observacao || '', itens: [], fretes: [] });
+      mapa.get(k).itens.push({ id: r.ID, item: r.ItemNF, desc: r.DescricaoItem || '', qtd: num(r.Quantidade), un: r.Unidade || '', vu: num(r.ValorUnitario), vi: num(r.ValorItem), sc: scNum(r.NSolicitacao), st: r.StatusVinculo || '' });
+    });
+    const notas = [...mapa.values()];
+    notas.forEach(n => {
+      const com = n.itens.filter(i => i.sc).length;
+      n.scs = [...new Set(n.itens.map(i => i.sc).filter(Boolean))];
+      n.status = com === n.itens.length ? 'Vinculada' : (com || n.itens.some(i => i.st === 'Sugerida')) ? 'Parcial' : 'Sem SC';
+    });
+    const fretes = P.fretes.map(r => ({ id: r.ID, numero: r.NumeroCTe || '', serie: r.Serie || '', chave: r.ChaveCTe || '', emissao: isoDia(r.DataEmissao), transp: r.Transportadora || '', cnpj: r.CNPJTransportadora || '', remetente: r.Remetente || '', destinatario: r.Destinatario || '', tomadorNome: r.Tomador || '', tomador: r.TomadorFrete || '', valor: num(r.ValorFrete) || 0, chaveNF: r.ChaveNFe || '', nf: r.NumeroNF || '', sc: scNum(r.NSolicitacao), status: r.StatusVinculo || (r.NumeroNF ? 'Com NF' : 'Sem NF'), arquivo: r.ArquivoPDF || '', obs: r.Observacao || '' }));
+    fretes.forEach(f => { const n = notas.find(x => (f.chaveNF && x.chave === f.chaveNF) || (f.nf && x.numero === f.nf)); if (n) { n.fretes.push(f); f.nota = n; if (!f.sc && n.scs.length) f.sc = n.scs.join(', '); } });
+    DOCS = { notas, fretes };
+    const opts = (id, vals) => { const el = fEl(id); const atual = el.value; el.querySelectorAll('option:not([value="*"])').forEach(o => o.remove()); [...new Set(vals.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).forEach(v => el.append(h('option', { value: v, text: v }))); el.value = [...el.options].some(o => o.value === atual) ? atual : '*'; };
+    opts('notasForn', notas.map(n => n.fornecedor));
+    opts('fretesTransp', fretes.map(f => f.transp));
+  }
+  const DK_ORDEM = {
+    notas: { numero: n => +n.numero || 0, emissao: n => n.emissao, fornecedor: n => norm(n.fornecedor), itens: n => n.itens.length, valor: n => n.valor, sc: n => n.scs.length ? +n.scs[0] : 1e9, frete: n => n.fretes.length },
+    fretes: { numero: f => +f.numero || 0, emissao: f => f.emissao, transp: f => norm(f.transp), tomador: f => f.tomador, valor: f => f.valor, nf: f => +f.nf || 0, sc: f => f.sc ? +String(f.sc).split(',')[0] : 1e9 }
+  };
+  function dkFiltrar(v) {
+    const q = norm(fEl(v + 'Busca').value).trim(), de = brISO(fEl(v + 'De').value), ate = brISO(fEl(v + 'Ate').value), st = fEl(v + 'Status').value;
+    const lista = DOCS ? DOCS[v] : [];
+    return lista.filter(x => {
+      if (st !== '*' && x.status !== st) return false;
+      if (de && x.emissao < de) return false;
+      if (ate && x.emissao > ate) return false;
+      if (DK[v].kpi && !DK[v].kpi(x)) return false;
+      if (v === 'notas') {
+        const f = fEl('notasForn').value; if (f !== '*' && x.fornecedor !== f) return false;
+        if (q && !norm([x.numero, x.fornecedor, x.cnpj, x.chave, x.scs.join(' '), x.itens.map(i => i.desc).join(' ')].join(' ')).includes(q)) return false;
+      } else {
+        const t = fEl('fretesTomador').value; if (t !== '*' && x.tomador !== t) return false;
+        const tr = fEl('fretesTransp').value; if (tr !== '*' && x.transp !== tr) return false;
+        if (q && !norm([x.numero, x.transp, x.nf, x.sc, x.remetente, x.chave].join(' ')).includes(q)) return false;
+      }
+      return true;
+    });
+  }
+  function dkKpis(v) {
+    const L = DOCS ? DOCS[v] : [], soma = a => a.reduce((s, x) => s + (x.valor || 0), 0);
+    const card = (rot, val, sub, cor, filtro) => {
+      const on = DK[v].kpiRot === rot;
+      return h('div', { class: 'kpi' + (on ? ' on' : ''), role: 'button', tabindex: 0, title: 'Filtrar', onclick: () => { DK[v].kpi = on ? null : filtro; DK[v].kpiRot = on ? null : rot; DK[v].pagina = 1; renderDoc(v, true); } },
+        h('div', { class: 'kpi-label' }, h('span', { class: 'kpi-ic', style: cor ? 'background:' + cor + '22;color:' + cor : '' , text: '●' }), rot),
+        h('div', { class: 'kpi-value', text: val }), h('div', { class: 'kpi-sub', text: sub }));
+    };
+    if (v === 'notas') {
+      const vin = L.filter(n => n.status === 'Vinculada'), par = L.filter(n => n.status === 'Parcial'), sem = L.filter(n => n.status === 'Sem SC');
+      return [card('Notas', fInt(L.length), fBRL(soma(L)), null, null),
+        card('Vinculadas', fInt(vin.length), fBRL(soma(vin)), '#16a34a', n => n.status === 'Vinculada'),
+        card('Parciais / sugeridas', fInt(par.length), fBRL(soma(par)), '#eda100', n => n.status === 'Parcial'),
+        card('Sem solicitação', fInt(sem.length), fBRL(soma(sem)), '#e34948', n => n.status === 'Sem SC')];
+    }
+    const trc = L.filter(f => f.tomador === 'TRC'), cif = L.filter(f => f.tomador !== 'TRC'), sem = L.filter(f => f.status === 'Sem NF');
+    return [card('CT-es', fInt(L.length), fBRL(soma(L)), null, null),
+      card('Pagos pela TRC', fInt(trc.length), fBRL(soma(trc)) + ' · entra no custo', '#2a78d6', f => f.tomador === 'TRC'),
+      card('CIF (fornecedor)', fInt(cif.length), fBRL(soma(cif)) + ' · não soma', '#94a3b8', f => f.tomador !== 'TRC'),
+      card('Sem NF', fInt(sem.length), fBRL(soma(sem)), '#e34948', f => f.status === 'Sem NF')];
+  }
+  const dkSc = scs => scs.length ? h('span', { class: 'dk-sc' }, scs.map(s => h('b', { text: s }))) : h('span', { class: 'dk-sc' }, h('b', { class: 'nao', text: 'sem SC' }));
+  function dkLinha(v, x) {
+    const aberto = DK[v].abertos.has(x.k || x.id);
+    const exp = h('td', { class: 'g-exp-c' }, h('button', { type: 'button', class: 'ibtn exp', 'data-acao': 'ver', 'aria-expanded': aberto, 'aria-label': 'Ver detalhes', title: 'Ver detalhes', html: ICON_G.chev }));
+    const tr = h('tr', { class: 'g-row dk-st-' + ST_CLASSE[x.status] + (aberto ? ' open' : ''), 'data-k': x.k || x.id, title: x.status });
+    if (v === 'notas') tr.append(exp,
+      h('td', { class: 'g-id' }, h('div', { text: x.numero }), h('div', { class: 'g-sub', text: x.modelo + (x.serie ? ' · série ' + x.serie : '') })),
+      h('td', { text: isoBR(x.emissao) }),
+      h('td', { class: 'g-wrap', title: x.fornecedor }, h('span', { class: 'clamp2', text: x.fornecedor })),
+      h('td', { class: 'g-prod', title: x.itens.map(i => i.desc).join('\n') }, h('span', { class: 'clamp2', text: x.itens.length > 1 ? x.itens.length + ' itens: ' + x.itens.map(i => i.desc).join('; ') : (x.itens[0] && x.itens[0].desc) })),
+      h('td', { class: 'num', text: fBRL(x.valor) }),
+      h('td', {}, dkSc(x.scs)),
+      h('td', {}, x.fretes.length ? h('span', { class: 'dk-tom ' + (x.fretes.some(f => f.tomador === 'TRC') ? 'trc' : 'cif'), text: x.fretes.map(f => f.tomador === 'TRC' ? 'TRC' : 'CIF').join(' + ') }) : h('span', { class: 'muted', text: '—' })));
+    else tr.append(exp,
+      h('td', { class: 'g-id' }, h('div', { text: x.numero }), h('div', { class: 'g-sub', text: x.serie ? 'série ' + x.serie : '' })),
+      h('td', { text: isoBR(x.emissao) }),
+      h('td', { class: 'g-wrap', title: x.transp }, h('span', { class: 'clamp2', text: x.transp })),
+      h('td', {}, h('span', { class: 'dk-tom ' + (x.tomador === 'TRC' ? 'trc' : 'cif'), text: x.tomador === 'TRC' ? 'TRC' : 'CIF' })),
+      h('td', { class: 'num', text: fBRL(x.valor) }),
+      h('td', { text: x.nf || '—' }),
+      h('td', {}, x.sc ? dkSc(String(x.sc).split(', ')) : dkSc([])));
+    return tr;
+  }
+  function dkDetalhe(v, x) {
+    const dl = pares => h('dl', {}, pares.map(([k, val]) => [h('dt', { text: k }), h('dd', { text: val || '—' })]));
+    const solInfo = sc => { const s = (SOL || []).find(y => scNum(y.solicitacao) === sc); return s ? s.produtos + ' · ' + s.status : ''; };
+    let cards;
+    if (v === 'notas') cards = [
+      h('div', {}, h('h4', { text: 'Nota fiscal' }), dl([['Nº / série', x.numero + (x.serie ? ' / ' + x.serie : '')], ['Modelo', x.modelo], ['Emissão', isoBR(x.emissao)], ['Valor total', fBRL(x.valor)], ['Vínculo', x.status]])),
+      h('div', {}, h('h4', { text: 'Fornecedor' }), dl([['Razão social', x.fornecedor], ['CNPJ', x.cnpj], ['Chave', x.chave], ['Arquivo', x.arquivo]])),
+      h('div', { class: 'gd-wide' }, h('h4', { text: 'Frete' }), x.fretes.length ? h('table', {}, h('thead', {}, h('tr', {}, ['CT-e', 'Transportadora', 'Tomador', 'Valor'].map((t, i) => h('th', { class: i === 3 ? 'num' : '', text: t })))),
+        h('tbody', {}, x.fretes.map(f => h('tr', {}, h('td', { text: f.numero }), h('td', { text: f.transp }), h('td', { text: f.tomador }), h('td', { class: 'num', text: fBRL(f.valor) }))))) : h('p', { class: 'gd-obs', text: 'Nenhum DACTE ligado a esta nota.' })),
+      h('div', { class: 'gd-wide', style: 'grid-column: span 4' }, h('h4', { text: 'Itens da nota e solicitação de cada item' }),
+        h('table', {}, h('thead', {}, h('tr', {}, ['Item', 'Descrição', 'Qtd', 'Valor unit.', 'Valor item', 'SC', 'Solicitação'].map((t, i) => h('th', { class: i >= 2 && i <= 4 ? 'num' : '', text: t })))),
+          h('tbody', {}, x.itens.map(i => h('tr', {}, h('td', { text: i.item || '' }), h('td', { text: i.desc }), h('td', { class: 'num', text: i.qtd ?? '' }), h('td', { class: 'num', text: i.vu != null ? fBRL(i.vu) : '' }), h('td', { class: 'num', text: i.vi != null ? fBRL(i.vi) : '' }),
+            h('td', { class: 'dk-it-sc' }, dkSc(i.sc ? [i.sc] : [])), h('td', { class: 'muted', text: i.sc ? solInfo(i.sc) : '' })))))),
+      x.obs ? h('div', { class: 'gd-wide', style: 'grid-column: span 4' }, h('h4', { text: 'Observação' }), h('p', { class: 'gd-obs', text: x.obs })) : null];
+    else cards = [
+      h('div', {}, h('h4', { text: 'CT-e' }), dl([['Nº / série', x.numero + (x.serie ? ' / ' + x.serie : '')], ['Emissão', isoBR(x.emissao)], ['Valor', fBRL(x.valor)], ['Chave', x.chave]])),
+      h('div', {}, h('h4', { text: 'Transporte' }), dl([['Transportadora', x.transp], ['CNPJ', x.cnpj], ['Remetente', x.remetente], ['Destinatário', x.destinatario]])),
+      h('div', {}, h('h4', { text: 'Tomador' }), dl([['Tomador', x.tomadorNome], ['Classificação', x.tomador], ['Custo da TRC?', x.tomador === 'TRC' ? 'Sim, soma no custo' : 'Não (CIF)']])),
+      h('div', {}, h('h4', { text: 'Nota e solicitação' }), dl([['NF', x.nf], ['Fornecedor da NF', x.nota && x.nota.fornecedor], ['Valor da NF', x.nota && fBRL(x.nota.valor)], ['SC', x.sc]])),
+      x.obs ? h('div', { class: 'gd-wide', style: 'grid-column: span 4' }, h('h4', { text: 'Observação' }), h('p', { class: 'gd-obs', text: x.obs })) : null];
+    return h('tr', { class: 'g-detail', 'data-detalhe': x.k || x.id }, h('td', { colspan: 9 }, h('div', { class: 'gd' }, cards)));
+  }
+  function renderDoc(v, animar = false) {
+    if (!DOCS) return;
+    const st = DK[v], lista = dkFiltrar(v), f = DK_ORDEM[v][st.ordem];
+    lista.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * st.dir; });
+    const paginas = Math.max(1, Math.ceil(lista.length / st.tamanho));
+    if (st.pagina > paginas) st.pagina = paginas;
+    const ini = (st.pagina - 1) * st.tamanho, pag = lista.slice(ini, ini + st.tamanho);
+    fEl(v + 'Kpis').replaceChildren(...dkKpis(v));
+    const total = DOCS[v].length, soma = lista.reduce((a, x) => a + (x.valor || 0), 0);
+    fEl(v + 'Resumo').replaceChildren(h('b', { text: plural(lista.length, v === 'notas' ? 'nota' : 'CT-e', v === 'notas' ? 'notas' : 'CT-es') }), ' · ', h('b', { text: fBRL(soma) }), lista.length !== total ? ' no filtro (de ' + fInt(total) + ')' : ' no total');
+    const corpo = fEl(v + 'Body');
+    corpo.replaceChildren(...pag.flatMap(x => st.abertos.has(x.k || x.id) ? [dkLinha(v, x), dkDetalhe(v, x)] : [dkLinha(v, x)]));
+    fEl(v + 'Vazio').hidden = lista.length > 0;
+    fEl(v + 'Grid').closest('.grid-scroll').hidden = lista.length === 0;
+    fEl(v + 'Info').textContent = lista.length ? 'Mostrando ' + (ini + 1) + '–' + (ini + pag.length) + ' de ' + fInt(lista.length) : '';
+    const b = (rot, p, extra = {}) => h('button', Object.assign({ type: 'button', 'data-pag': p, text: rot }, extra));
+    const itens = [b('‹', st.pagina - 1, { disabled: st.pagina <= 1 })]; let ult = 0;
+    for (let p = 1; p <= paginas; p++) if (p === 1 || p === paginas || Math.abs(p - st.pagina) <= 1) { if (p - ult > 1) itens.push(h('span', { class: 'gap', text: '…' })); itens.push(b(String(p), p, p === st.pagina ? { 'aria-current': 'page' } : {})); ult = p; }
+    itens.push(b('›', st.pagina + 1, { disabled: st.pagina >= paginas }));
+    fEl(v + 'Pager').replaceChildren(...itens);
+    document.querySelectorAll('#' + v + 'Grid th').forEach(th => { const bt = th.querySelector('.sort'); if (!bt) return; if (bt.dataset.sort === st.ordem) th.setAttribute('aria-sort', st.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort'); });
+    if (animar && typeof play === 'function') play(corpo.querySelectorAll('tr.g-row'), { opacity: [0, 1], transform: ['translateY(6px)', 'none'] }, { duration: .25, ease: 'easeOut', delay: M && M.stagger(.02) });
+  }
+  ['notas', 'fretes'].forEach(v => {
+    const st = DK[v], re = () => { st.pagina = 1; renderDoc(v, true); };
+    let t; fEl(v + 'Busca').addEventListener('input', () => { clearTimeout(t); t = setTimeout(re, 160); });
+    const sels = v === 'notas' ? ['notasStatus', 'notasForn'] : ['fretesStatus', 'fretesTomador', 'fretesTransp'];
+    sels.forEach(id => fEl(id).addEventListener('change', re));
+    [v + 'De', v + 'Ate'].forEach(id => { fEl(id).addEventListener('change', re); fEl(id).addEventListener('input', e => { const x = e.target.value; if (x === '' || parseDate(x)) re(); }); });
+    fEl(v + 'Limpar').addEventListener('click', () => { fEl(v + 'Busca').value = ''; fEl(v + 'De').value = ''; fEl(v + 'Ate').value = ''; sels.forEach(id => { fEl(id).value = '*'; fEl(id).dispatchEvent(new Event('change')); }); st.kpi = null; st.kpiRot = null; re(); });
+    fEl(v + 'Pager').addEventListener('click', e => { const bt = e.target.closest('button[data-pag]'); if (!bt || bt.disabled) return; st.pagina = +bt.dataset.pag; renderDoc(v, true); });
+    document.querySelectorAll('#' + v + 'Grid .sort').forEach(bt => bt.addEventListener('click', () => { const k = bt.dataset.sort; if (st.ordem === k) st.dir *= -1; else { st.ordem = k; st.dir = k === 'emissao' || k === 'valor' ? -1 : 1; } renderDoc(v, true); }));
+    fEl(v + 'Body').addEventListener('click', e => {
+      const bt = e.target.closest('[data-acao="ver"]'); if (!bt) return;
+      const tr = bt.closest('tr.g-row'), k = tr.dataset.k, x = DOCS[v].find(y => String(y.k || y.id) === k); if (!x) return;
+      if (st.abertos.has(x.k || x.id)) { st.abertos.delete(x.k || x.id); tr.classList.remove('open'); bt.setAttribute('aria-expanded', 'false'); const d = tr.nextElementSibling; if (d && d.classList.contains('g-detail')) d.remove(); }
+      else { st.abertos.add(x.k || x.id); tr.classList.add('open'); bt.setAttribute('aria-expanded', 'true'); const det = dkDetalhe(v, x); tr.after(det); if (typeof play === 'function') play(det.querySelector('.gd'), { opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }, { duration: .3 }); }
+    });
+  });
+
   // ===================== Inicialização =====================
   (async function iniciar() {
     // Listas e dados carregam em paralelo; a tela aparece na hora com skeleton
@@ -3701,6 +3990,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       if (viewAtual === 'solicitacoes') renderGrid();
       else if (viewAtual === 'dashboard') await montarDashboard(false);
       else if (viewAtual === 'listas') renderListas();
+      else if (viewAtual === 'notas' || viewAtual === 'fretes') { await garantirDocs(); renderDoc(viewAtual); }
     }
     if (semAnimacao) return;
     play(document.querySelector('.sidebar'), { opacity: [0, 1], transform: ['translateX(-16px)', 'none'] }, { type: M.spring, bounce: .15, duration: .5 });
