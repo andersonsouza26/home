@@ -1011,6 +1011,11 @@
   .dk-link { color: inherit; text-decoration: none; }
   .dk-nfbadge { display: inline-block; margin-top: 3px; font-size: .7rem; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 1px 7px; border-radius: 99px; }
 
+  .qe-bn-row { display: flex; gap: 8px; }
+  .qe-bn-row input { flex: 1; min-width: 0; }
+  .qe-bn-info { margin: 6px 0 0; font-size: .8rem; color: var(--primary); }
+  .qe-buscanf label .muted { font-weight: 400; font-size: .76rem; }
+
   /* Cadastros (listas) */
   .ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ls-tab {
@@ -1781,6 +1786,12 @@
         <select id="qeComprador" data-grava="tbSolicitacoes[Comprador]" data-lista="tbListaComprador[Comprador]"><option value="" data-fixo>Selecione...</option></select>
       </div>
       <div class="qe-sec">Fornecedor e Nota Fiscal</div>
+      <div class="field col-12 qe-buscanf">
+        <label for="qeBuscaNf">Buscar nota já cadastrada <span class="muted">(preenche os campos abaixo e vincula a nota a esta solicitação)</span></label>
+        <div class="qe-bn-row"><input type="search" id="qeBuscaNf" list="qeBuscaNfL" placeholder="Digite o nº da NF ou o fornecedor…" autocomplete="off"><datalist id="qeBuscaNfL"></datalist>
+        <button type="button" class="btn btn-neutral" id="qeUsarNf">Usar esta nota</button></div>
+        <p class="qe-bn-info" id="qeBnInfo" hidden></p>
+      </div>
       <div class="field col-6">
         <label for="qeFornecedor">Fornecedor</label>
         <input type="text" id="qeFornecedor" placeholder="Razão social do fornecedor" list="lstFornecedor" autocomplete="off" data-grava="tbSolicitacoes[Fornecedor]" data-lista="tbListaFornecedor[Fornecedor]">
@@ -3656,6 +3667,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     fEl('qeTransp').value = s.transportador || '';
     fEl('qeFrete').value = numParaMoeda(s.valorFrete);
     fEl('qeObs').value = s.observacao || '';
+    prepararBuscaNf(s);
     qe.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
     qeTotal();
     closePop();
@@ -3708,9 +3720,11 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       transportador: fEl('qeTransp').value.trim(), valorFrete: moedaParaNum(fEl('qeFrete').value), observacao: fEl('qeObs').value.trim()
     });
     fecharEdicao();
+    let vinc = [];
+    try { vinc = await vincularNotasDaEdicao(s); } catch (err) { showToast('Vínculo da nota não gravado', err.message, 'error'); }
     G.destaque = s.id;
     renderGrid();
-    showToast('Solicitação atualizada', (idSol(s) || 'Registro') + ' salva com sucesso.');
+    showToast('Solicitação atualizada', (idSol(s) || 'Registro') + ' salva com sucesso.' + (vinc.length ? ' NF ' + vinc.join(', ') + ' vinculada a esta solicitação.' : ''));
   });
 
   // ===================== Novo registro vindo do formulário =====================
@@ -3901,7 +3915,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const mapa = new Map();
     P.notas.forEach(r => {
       const k = (r.NumeroNF || '') + '|' + (r.CNPJFornecedor || r.Fornecedor || '');
-      if (!mapa.has(k)) mapa.set(k, { k, numero: r.NumeroNF || '', serie: r.Serie || '', modelo: r.Modelo || '', chave: r.ChaveNFe || '', emissao: isoDia(r.DataEmissao), fornecedor: r.Fornecedor || '', cnpj: r.CNPJFornecedor || '', valor: num(r.ValorTotalNF) || 0, arquivo: r.ArquivoPDF || '', obs: r.Observacao || '', itens: [], fretes: [] });
+      if (!mapa.has(k)) mapa.set(k, { k, numero: r.NumeroNF || '', serie: r.Serie || '', modelo: r.Modelo || '', chave: r.ChaveNFe || '', emissao: isoDia(r.DataEmissao), entrega: isoDia(r.DataEntrega), fornecedor: r.Fornecedor || '', cnpj: r.CNPJFornecedor || '', valor: num(r.ValorTotalNF) || 0, arquivo: r.ArquivoPDF || '', obs: r.Observacao || '', itens: [], fretes: [] });
       mapa.get(k).itens.push({ id: r.ID, item: r.ItemNF, desc: r.DescricaoItem || '', qtd: num(r.Quantidade), un: r.Unidade || '', vu: num(r.ValorUnitario), vi: num(r.ValorItem), sc: scNum(r.NSolicitacao), st: r.StatusVinculo || '' });
     });
     const notas = [...mapa.values()];
@@ -3995,7 +4009,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const solInfo = sc => { const s = (SOL || []).find(y => scNum(y.solicitacao) === sc); return s ? s.produtos + ' · ' + s.status : ''; };
     let cards;
     if (v === 'notas') cards = [
-      h('div', {}, h('h4', { text: 'Nota fiscal' }), dl([['Nº / série', x.numero + (x.serie ? ' / ' + x.serie : '')], ['Modelo', x.modelo], ['Emissão', isoBR(x.emissao)], ['Valor total', fBRL(x.valor)], ['Vínculo', x.status]])),
+      h('div', {}, h('h4', { text: 'Nota fiscal' }), dl([['Nº / série', x.numero + (x.serie ? ' / ' + x.serie : '')], ['Modelo', x.modelo], ['Emissão', isoBR(x.emissao)], ['Entrega', isoBR(x.entrega)], ['Valor total', fBRL(x.valor)], ['Vínculo', x.status]])),
       h('div', {}, h('h4', { text: 'Fornecedor' }), dl([['Razão social', x.fornecedor], ['CNPJ', x.cnpj], ['Chave', x.chave], ['Arquivo', x.arquivo]])),
       h('div', { class: 'gd-wide' }, h('h4', { text: 'Frete' }), x.fretes.length ? h('table', {}, h('thead', {}, h('tr', {}, ['CT-e', 'Transportadora', 'Tomador', 'Valor'].map((t, i) => h('th', { class: i === 3 ? 'num' : '', text: t })))),
         h('tbody', {}, x.fretes.map(f => h('tr', {}, h('td', { text: f.numero }), h('td', { text: f.transp }), h('td', { text: f.tomador }), h('td', { class: 'num', text: fBRL(f.valor) }))))) : h('p', { class: 'gd-obs', text: 'Nenhum DACTE ligado a esta nota.' })),
@@ -4156,6 +4170,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     s.valorNF = Math.round(((+s.valorNF || 0) + (valor || 0)) * 100) / 100;
     if (!s.fornecedor) s.fornecedor = n.fornecedor;
     if (!s.dataEmissao) s.dataEmissao = n.emissao;
+    if (!s.dataEntrega && n.entrega) s.dataEntrega = n.entrega;
     const ft = inclFrete ? n.fretes.filter(f => f.tomador === 'TRC') : [];
     if (ft.length) { s.valorFrete = Math.round(((+s.valorFrete || 0) + ft.reduce((a, f) => a + f.valor, 0)) * 100) / 100; if (!s.transportador) s.transportador = ft[0].transp; }
     await apiGravar('atualizar', s);
@@ -4198,7 +4213,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const corpo = [
       campo('Nº NF', inp('fmNum', n && n.numero, { inputmode: 'numeric' }), 1, 3),
       campo('Emissão', inp('fmEmi', n && n.emissao, { type: 'date' }), 1, 3),
-      campo('Valor total da NF (R$)', inp('fmValor', n && valorBR(n.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 6),
+      campo('Data de entrega', inp('fmEnt', n && n.entrega, { type: 'date' }), 0, 3),
+      campo('Valor total da NF (R$)', inp('fmValor', n && valorBR(n.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 3),
       campo('Fornecedor', inp('fmForn', n && n.fornecedor, { list: 'fmFornL' }), 1, 12), datalist('fmFornL', forn),
       (!edit || it0) ? campo('Descrição', inp('fmDesc', it0 && it0.desc), 1, 12) : h('p', { class: 'fm-nota', style: 'grid-column: span 12', text: 'Nota com ' + n.itens.length + ' itens: a descrição de cada item não é editada aqui.' }),
       edit ? null : campo('Solicitação (opcional)', selSC(''), 0, 12),
@@ -4223,7 +4239,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       const dup = DOCS.notas.find(x => x.numero === num && norm(x.fornecedor) === norm(forn) && x !== n);
       if (dup) return 'Já existe a NF ' + num + ' desse fornecedor.';
       const qtd = fEl('fmQtd') ? lerValor(val('fmQtd')) : null;
-      const cab = { NumeroNF: num, Serie: val('fmSerie'), Modelo: fEl('fmModelo').value, DataEmissao: emi, Fornecedor: forn, CNPJFornecedor: val('fmCnpj'), ChaveNFe: chave, ValorTotalNF: String(valor), ArquivoPDF: val('fmArq'), Observacao: val('fmObs') };
+      const cab = { NumeroNF: num, Serie: val('fmSerie'), Modelo: fEl('fmModelo').value, DataEmissao: emi, DataEntrega: val('fmEnt'), Fornecedor: forn, CNPJFornecedor: val('fmCnpj'), ChaveNFe: chave, ValorTotalNF: String(valor), ArquivoPDF: val('fmArq'), Observacao: val('fmObs') };
       if (edit) {
         for (const i of n.itens) {
           const item = Object.assign({}, cab, it0 ? { DescricaoItem: desc, Quantidade: qtd == null ? '' : String(qtd), Unidade: val('fmUn'), ValorItem: String(valor), ValorUnitario: qtd ? String(Math.round(valor / qtd * 100) / 100) : '' } : {});
@@ -4349,6 +4365,79 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     if (!DOCS) montarDocs();
     const sc = scNum(s.solicitacao || s.fluig);
     return sc ? DOCS.notas.filter(n => n.itens.some(i => i.sc === sc)) : [];
+  }
+
+  // ===================== Edição da solicitação: buscar nota cadastrada =====================
+  let QE_NOTAS = [];
+  const rotNota = n => n.numero + ' · ' + n.fornecedor + ' · ' + fBRL(n.valor) + ' · ' + isoBR(n.emissao) + (n.scs.length ? ' · SC ' + n.scs.join(', ') : ' · sem SC');
+  function prepararBuscaNf(s) {
+    QE_NOTAS = [];
+    fEl('qeBuscaNf').value = ''; fEl('qeBnInfo').hidden = true;
+    if (!window.DOCS_PLANILHA) { fEl('qeBuscaNfL').replaceChildren(); return; }
+    if (!DOCS) montarDocs();
+    const sc = scNum(s.solicitacao || s.fluig);
+    const ord = DOCS.notas.slice().sort((a, b) => (a.scs.length ? 1 : 0) - (b.scs.length ? 1 : 0) || (b.emissao || '').localeCompare(a.emissao || ''));
+    fEl('qeBuscaNfL').replaceChildren(...ord.filter(n => !n.scs.includes(sc)).map(n => h('option', { value: rotNota(n) })));
+  }
+  function usarNotaNaEdicao() {
+    const q = fEl('qeBuscaNf').value.trim(); if (!q) return;
+    if (!DOCS) montarDocs();
+    let n = DOCS.notas.find(x => rotNota(x) === q);
+    if (!n) { const c = DOCS.notas.filter(x => x.numero === q.replace(/^0+/, '') || norm(rotNota(x)).includes(norm(q))); if (c.length === 1) n = c[0]; else { fEl('qeBnInfo').textContent = c.length ? c.length + ' notas encontradas: escolha uma da lista.' : 'Nenhuma nota cadastrada com esse número/fornecedor. Cadastre em Notas Fiscais ou preencha os campos à mão.'; fEl('qeBnInfo').hidden = false; return; } }
+    if (QE_NOTAS.includes(n)) return;
+    QE_NOTAS.push(n);
+    const nfAtual = fEl('qeNf').value.trim(), lista = nfAtual ? nfAtual.split(/[,;]\s*/) : [];
+    const jaTem = lista.includes(n.numero);
+    if (!jaTem) {
+      fEl('qeNf').value = lista.concat(n.numero).join(', ');
+      const vAtual = lista.length ? (moedaParaNum(fEl('qeValorNf').value) || 0) : 0;
+      fEl('qeValorNf').value = numParaMoeda(Math.round((vAtual + n.valor) * 100) / 100);
+    }
+    if (!fEl('qeFornecedor').value.trim() || !lista.length) fEl('qeFornecedor').value = n.fornecedor;
+    if (!fEl('qeEmissao').value || !lista.length) fEl('qeEmissao').value = isoBR(n.emissao);
+    if (n.entrega && (!fEl('qeEntrega').value || !lista.length)) fEl('qeEntrega').value = isoBR(n.entrega);
+    const ft = n.fretes.filter(f => f.tomador === 'TRC');
+    let avisoFrete = '';
+    if (ft.length && !jaTem) {
+      const tv = ft.reduce((a, f) => a + f.valor, 0);
+      fEl('qeFrete').value = numParaMoeda(Math.round(((moedaParaNum(fEl('qeFrete').value) || 0) + tv) * 100) / 100);
+      const sel = fEl('qeTransp'), op = [...sel.options].find(o => norm(ft[0].transp).includes(norm(o.value)) && o.value);
+      if (op) { sel.value = op.value; sel.dispatchEvent(new Event('change')); } else avisoFrete = ' Transportadora "' + ft[0].transp + '" não está na lista: selecione manualmente.';
+    } else if (n.fretes.length) avisoFrete = ' Frete CIF (pago pelo fornecedor): não somado.';
+    ['qeValorNf', 'qeFrete'].forEach(id => fEl(id).dispatchEvent(new Event('input', { bubbles: true })));
+    if (typeof qeTotal === 'function') qeTotal();
+    fEl('qeBnInfo').textContent = (jaTem ? 'NF ' + n.numero + ' já constava nesta solicitação; ela será apenas vinculada.' : 'NF ' + n.numero + ' aplicada' + (lista.length ? ' (somada à NF já existente)' : '') + '. Ao salvar, a nota fica vinculada a esta solicitação.') + avisoFrete;
+    fEl('qeBnInfo').hidden = false;
+    fEl('qeBuscaNf').value = '';
+  }
+  fEl('qeUsarNf').addEventListener('click', usarNotaNaEdicao);
+  fEl('qeBuscaNf').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); usarNotaNaEdicao(); } });
+  fEl('qeBuscaNf').addEventListener('change', () => { if (DOCS && DOCS.notas.some(x => rotNota(x) === fEl('qeBuscaNf').value)) usarNotaNaEdicao(); });
+  async function vincularNotasDaEdicao(s) {
+    if (!window.DOCS_PLANILHA) return [];
+    if (!DOCS) montarDocs();
+    const sc = scNum(s.solicitacao || s.fluig); if (!sc) return [];
+    const nfs = String(s.nf || '').split(/[,;]\s*/).map(x => x.replace(/^0+/, '')).filter(Boolean);
+    const alvo = new Set(QE_NOTAS);
+    nfs.forEach(nf => { const c = DOCS.notas.filter(x => x.numero === nf && (!s.fornecedor || norm(x.fornecedor).slice(0, 6) === norm(s.fornecedor).slice(0, 6))); if (c.length === 1) alvo.add(c[0]); });
+    const feitos = [], hoje = hojeISO();
+    for (const n of alvo) {
+      if (n.itens.every(i => i.sc === sc)) continue;
+      for (const i of n.itens) {
+        const item = { NSolicitacao: sc, StatusVinculo: 'Vinculada', DataVinculo: hoje, VinculadoPor: 'Compras TRC' };
+        if (!n.entrega && s.dataEntrega) item.DataEntrega = s.dataEntrega;
+        await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: i.id, item });
+        const r = window.DOCS_PLANILHA.notas.find(y => y.ID === i.id); if (r) Object.assign(r, item);
+      }
+      for (const f of n.fretes) {
+        await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { NSolicitacao: sc } });
+        const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) r.NSolicitacao = sc;
+      }
+      feitos.push(n.numero);
+    }
+    QE_NOTAS = [];
+    if (feitos.length) { DOCS = null; montarDocs(); renderDashDocs(); }
+    return feitos;
   }
 
   // ===================== Inicialização =====================
