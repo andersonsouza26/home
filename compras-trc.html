@@ -1026,6 +1026,10 @@
   .qe-bn-info { margin: 6px 0 0; font-size: .8rem; color: var(--primary); }
   .qe-buscanf label .muted { font-weight: 400; font-size: .76rem; }
 
+  .filters.sol-filtros { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+  .filters.sol-filtros .f-busca { grid-column: span 2; }
+  @media (max-width: 700px) { .filters.sol-filtros .f-busca { grid-column: 1 / -1; } }
+
   /* Cadastros (listas) */
   .ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ls-tab {
@@ -1289,7 +1293,7 @@
       </header>
       <section class="kpis dk-kpis" id="solKpis" aria-label="Resumo"></section>
 
-      <section class="filters" aria-label="Filtros">
+      <section class="filters sol-filtros" aria-label="Filtros">
         <div class="f-field f-busca">
           <label for="fBusca">Buscar</label>
           <div class="input-wrap has-icon">
@@ -1321,6 +1325,34 @@
             <option value="Sim" data-color="#22c55e">Sim</option>
             <option value="Não" data-color="#94a3b8">Não</option>
           </select>
+        </div>
+        <div class="f-field">
+          <label for="fSolicitante">Solicitante</label>
+          <select id="fSolicitante"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fClassificacao">Classificação</label>
+          <select id="fClassificacao"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fNatureza">Natureza da operação</label>
+          <select id="fNatureza"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fCentro">Centro de custo</label>
+          <select id="fCentro"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fFornecedor">Fornecedor</label>
+          <select id="fFornecedor"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fTransportador">Transportador</label>
+          <select id="fTransportador"><option value="*" selected>Todos</option></select>
+        </div>
+        <div class="f-field">
+          <label for="fTemNf">Nota fiscal</label>
+          <select id="fTemNf"><option value="*" selected>Todos</option><option value="sim" data-color="#16a34a">Com NF</option><option value="nao" data-color="#eda100">Sem NF</option></select>
         </div>
         <div class="f-field">
           <label for="fDe">Data de</label>
@@ -3464,7 +3496,12 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   function filtrar() {
     const q = norm(fEl('fBusca').value.trim()), st = fEl('fStatus').value, co = fEl('fComprador').value, ra = fEl('fRateio').value;
     const de = brISO(fEl('fDe').value), ate = brISO(fEl('fAte').value);
+    const fv = id => fEl(id).value;
+    const so = fv('fSolicitante'), cl = fv('fClassificacao'), na = fv('fNatureza'), cc = fv('fCentro'), fo = fv('fFornecedor'), tr = fv('fTransportador'), tn = fv('fTemNf');
     return SOL.filter(s =>
+      (so === '*' || s.solicitante === so) && (cl === '*' || s.classificacao === cl) && (na === '*' || s.natureza === na) &&
+      (cc === '*' || s.centros.some(c => String(c.cc) === cc)) && (fo === '*' || s.fornecedor === fo) && (tr === '*' || s.transportador === tr) &&
+      (tn === '*' || (tn === 'sim' ? !!String(s.nf || '').trim() : !String(s.nf || '').trim())) &&
       (!q || norm([s.fluig, s.solicitacao, s.solicitante, s.produtos, s.fornecedor, s.nf, s.comprador, s.classificacao, ...s.centros.map(c => c.cc)].join(' ')).includes(q)) &&
       (st === '*' || s.status === st) && (co === '*' || s.comprador === co) && (ra === '*' || s.rateio === ra) &&
       (!de || (s.dataSolicitada || '') >= de) && (!ate || (s.dataSolicitada || '') <= ate));
@@ -3553,8 +3590,31 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         h('div', { class: 'kpi-value', text: fInt(L.length) }), h('div', { class: 'kpi-sub', text: fBRL(soma(L)) + (sub ? ' · ' + sub : '') }));
     });
   }
+  let solOpcoesFeitas = null;
+  function preencherFiltrosSol() {
+    if (solOpcoesFeitas === SOL) return;
+    solOpcoesFeitas = SOL;
+    const preencher = (id, vals, rot) => {
+      const el = fEl(id), atual = el.value;
+      el.querySelectorAll('option:not([value="*"])').forEach(o => o.remove());
+      [...new Set(vals.filter(v => v != null && String(v).trim() !== '').map(String))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+        .forEach(v => el.append(h('option', { value: v, text: rot ? rot(v) : v })));
+      el.value = [...el.options].some(o => o.value === atual) ? atual : '*';
+      el.dispatchEvent(new Event('change'));
+    };
+    const ccs = new Map(); SOL.forEach(s => s.centros.forEach(c => { if (c.cc && !ccs.has(String(c.cc))) ccs.set(String(c.cc), rotuloCentro(c.cc, c.descricao)); }));
+    limpandoFiltros = true;
+    preencher('fSolicitante', SOL.map(s => s.solicitante));
+    preencher('fClassificacao', SOL.map(s => s.classificacao));
+    preencher('fNatureza', SOL.map(s => s.natureza));
+    preencher('fCentro', [...ccs.keys()], v => ccs.get(v) || v);
+    preencher('fFornecedor', SOL.map(s => s.fornecedor));
+    preencher('fTransportador', SOL.map(s => s.transportador));
+    limpandoFiltros = false;
+  }
   function renderGrid({ animar = false } = {}) {
     if (!SOL) return;
+    preencherFiltrosSol();
     const base = filtrar();
     fEl('solKpis').replaceChildren(...solKpis(base));
     const lista = G.kpi ? base.filter(G.kpi) : base;
@@ -3588,7 +3648,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   let tBusca;
   const aplicarFiltros = () => { G.pagina = 1; renderGrid({ animar: true }); };
   fEl('fBusca').addEventListener('input', () => { clearTimeout(tBusca); tBusca = setTimeout(aplicarFiltros, 160); });
-  ['fStatus', 'fComprador', 'fRateio'].forEach(id => fEl(id).addEventListener('change', () => { if (!limpandoFiltros) aplicarFiltros(); }));
+  ['fStatus', 'fComprador', 'fRateio', ...['fSolicitante', 'fClassificacao', 'fNatureza', 'fCentro', 'fFornecedor', 'fTransportador', 'fTemNf']].forEach(id => fEl(id).addEventListener('change', () => { if (!limpandoFiltros) aplicarFiltros(); }));
   ['fDe', 'fAte'].forEach(id => {
     fEl(id).addEventListener('change', () => { if (!limpandoFiltros) aplicarFiltros(); });
     fEl(id).addEventListener('input', e => { const v = e.target.value; if (v === '' || parseDate(v)) aplicarFiltros(); });
@@ -3598,7 +3658,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     limpandoFiltros = true;
     fEl('fBusca').value = ''; fEl('fDe').value = ''; fEl('fAte').value = '';
     fEl('fDe').classList.remove('invalid'); fEl('fAte').classList.remove('invalid');
-    ['fStatus', 'fComprador', 'fRateio'].forEach(id => { fEl(id).value = '*'; fEl(id).dispatchEvent(new Event('change')); });
+    ['fStatus', 'fComprador', 'fRateio', ...['fSolicitante', 'fClassificacao', 'fNatureza', 'fCentro', 'fFornecedor', 'fTransportador', 'fTemNf']].forEach(id => { fEl(id).value = '*'; fEl(id).dispatchEvent(new Event('change')); });
     limpandoFiltros = false;
     G.kpi = null; G.kpiRot = null;
     aplicarFiltros();
