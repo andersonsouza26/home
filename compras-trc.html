@@ -632,6 +632,8 @@
   .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite; display: inline-block; flex-shrink: 0; }
   .loader-overlay { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: rgba(0,0,0,.28); backdrop-filter: blur(1.5px); opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; }
   .loader-overlay.on { opacity: 1; visibility: visible; }
+  .loader-overlay[popover] { inset: 0; width: auto; height: auto; max-width: none; max-height: none; margin: 0; border: 0; padding: 0; overflow: hidden; color: var(--text); }
+  .loader-overlay[popover]:popover-open { display: grid; }
   .loader-box { display: flex; align-items: center; gap: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 14px 20px; font-size: .92rem; font-weight: 600; }
   .loader-box .spinner { width: 22px; height: 22px; color: var(--primary); }
   .btn-carregando { position: relative; pointer-events: none; }
@@ -2795,14 +2797,19 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     if (loaderConta++ === 0) {
       const b = document.activeElement;
       if (b && b.tagName === 'BUTTON') { loaderBtn = b; b.classList.add('btn-carregando'); b.setAttribute('aria-busy', 'true'); }
+      document.getElementById('loaderMsg').textContent = msg || 'Processando…';
     }
-    document.getElementById('loaderMsg').textContent = msg || 'Processando…';
-    const o = document.getElementById('loaderGlobal'); o.classList.add('on'); o.setAttribute('aria-hidden', 'false');
+    const o = document.getElementById('loaderGlobal');
+    // Top layer: fica por cima de qualquer diálogo aberto (reabre para subir acima do último diálogo)
+    if (o.showPopover) { try { if (o.matches(':popover-open')) o.hidePopover(); o.showPopover(); } catch (e) { } }
+    o.classList.add('on'); o.setAttribute('aria-hidden', 'false');
   }
+  async function comLoader(msg, fn) { loaderOn(msg); try { return await fn(); } finally { loaderOff(); } }
   function loaderOff() {
     if (--loaderConta > 0) return;
     loaderConta = 0;
     const o = document.getElementById('loaderGlobal'); o.classList.remove('on'); o.setAttribute('aria-hidden', 'true');
+    if (o.hidePopover) setTimeout(() => { if (!o.classList.contains('on')) try { o.hidePopover(); } catch (e) { } }, 160);
     if (loaderBtn) { loaderBtn.classList.remove('btn-carregando'); loaderBtn.removeAttribute('aria-busy'); loaderBtn = null; }
   }
   async function chamarFluxo(nome, metodo, corpo) {
@@ -3737,7 +3744,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     });
     fecharEdicao();
     let vinc = [];
-    try { vinc = await vincularNotasDaEdicao(s); } catch (err) { showToast('Vínculo da nota não gravado', err.message, 'error'); }
+    try { vinc = await comLoader('Vinculando nota à solicitação…', () => vincularNotasDaEdicao(s)); } catch (err) { showToast('Vínculo da nota não gravado', err.message, 'error'); }
     G.destaque = s.id;
     renderGrid();
     showToast('Solicitação atualizada', (idSol(s) || 'Registro') + ' salva com sucesso.' + (vinc.length ? ' NF ' + vinc.join(', ') + ' vinculada a esta solicitação.' : ''));
@@ -4129,7 +4136,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         h('table', { class: 'vc-tab' }, h('thead', {}, h('tr', {}, h('th', { text: 'Item' }), h('th', { text: 'Descrição' }), h('th', { class: 'num', text: 'Valor' }), h('th', { text: 'Solicitação' }))), h('tbody', {}, linhas)),
         h('label', { class: 'vc-chk' }, lancar, ' Lançar os dados da NF (nº, valor, emissão, fornecedor e frete TRC) na solicitação')),
       h('footer', { class: 'qe-foot' }, h('button', { type: 'button', class: 'btn btn-neutral', text: 'Cancelar', onclick: () => vcDlg.close() }),
-        h('button', { type: 'button', class: 'btn btn-primary', id: 'vcSalvar', text: 'Salvar vínculo', onclick: salvarVinculo }))));
+        h('button', { type: 'button', class: 'btn btn-primary', id: 'vcSalvar', onclick: salvarVinculo }, h('span', { text: 'Salvar vínculo' })))));
     estilizar(vcDlg);
     vcDlg.showModal();
   }
@@ -4140,6 +4147,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const lancar = fEl('vcLancar').checked;
     if (!mud.length && !lancar) { vcDlg.close(); return; }
     const bt = fEl('vcSalvar'); bt.disabled = true; bt.classList.add('btn-carregando');
+    loaderOn('Salvando vínculo…');
     try {
       for (const x of mud) {
         await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: x.id,
@@ -4164,7 +4172,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       showToast('Vínculo salvo', 'NF ' + n.numero + (scs.length ? ' → SC ' + scs.join(', ') : ' sem solicitação') + (lancadas ? ' · dados lançados em ' + lancadas + ' solicitação(ões)' : ''));
     } catch (e) {
       showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error');
-    } finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
+    } finally { loaderOff(); bt.disabled = false; bt.classList.remove('btn-carregando'); }
   }
   fEl('notasBody').addEventListener('click', e => {
     const bt = e.target.closest('[data-acao="vincular"]'); if (!bt) return;
@@ -4220,13 +4228,13 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('div', { class: 'qe-body' }, corpo), detalhes.length ? det : null,
       h('p', { class: 'fm-erro', id: 'fmErro', hidden: true }),
       h('footer', { class: 'qe-foot' }, h('button', { type: 'button', class: 'btn btn-neutral', text: 'Cancelar', onclick: () => fmDlg.close() }),
-        h('button', { type: 'button', class: 'btn btn-primary', id: 'fmSalvar', text: rotSalvar || 'Salvar', onclick: async () => {
+        h('button', { type: 'button', class: 'btn btn-primary', id: 'fmSalvar', onclick: async () => {
           const bt = fEl('fmSalvar'); fEl('fmErro').hidden = true;
           bt.disabled = true; bt.classList.add('btn-carregando');
-          try { const msg = await onSalvar(); if (msg) { fEl('fmErro').textContent = msg; fEl('fmErro').hidden = false; } else fmDlg.close(); }
+          try { const msg = await comLoader('Salvando na planilha…', onSalvar); if (msg) { fEl('fmErro').textContent = msg; fEl('fmErro').hidden = false; } else fmDlg.close(); }
           catch (e) { showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error'); }
           finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
-        } }))));
+        } }, h('span', { text: rotSalvar || 'Salvar' })))));
     estilizar(fmDlg);
     fmDlg.showModal();
   }
@@ -4351,6 +4359,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       confirmar: 'Sim, excluir'
     });
     if (!ok) return;
+    loaderOn(nota ? 'Excluindo nota…' : 'Excluindo frete…');
     try {
       if (nota) {
         for (const i of x.itens) await chamarFluxo('listasCrud', 'POST', { acao: 'excluir', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: i.id });
@@ -4366,6 +4375,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       await recarregarDocs();
       showToast(nota ? 'Nota excluída' : 'Frete excluído', 'Registro removido da planilha.');
     } catch (e) { showToast('Falha ao excluir', 'A planilha não respondeu (' + e.message + ').', 'error'); }
+    finally { loaderOff(); }
   }
   fEl('notasNovo').addEventListener('click', () => formNota(null));
   fEl('fretesNovo').addEventListener('click', () => formFrete(null));
@@ -4487,6 +4497,6 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     if (viewAtual === 'dashboard') animarGraficos(document.getElementById('view-dashboard'), true);
   })();
 </script>
-<div class="loader-overlay" id="loaderGlobal" role="status" aria-live="polite" aria-hidden="true"><div class="loader-box"><span class="spinner"></span><span id="loaderMsg">Salvando…</span></div></div>
+<div class="loader-overlay" id="loaderGlobal" popover="manual" role="status" aria-live="polite" aria-hidden="true"><div class="loader-box"><span class="spinner"></span><span id="loaderMsg">Salvando…</span></div></div>
 </body>
 </html>
