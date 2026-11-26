@@ -1000,6 +1000,17 @@
   .vc-chk { display: flex !important; justify-content: flex-start; gap: 8px; align-items: center; font-size: .85rem; margin-top: 6px; text-align: left; }
   .vc-chk input { width: auto !important; flex: none; margin: 0; }
 
+  .fm-dlg { width: min(760px, calc(100% - 32px)); }
+  .fm-det { margin: 0 22px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .fm-det summary { cursor: pointer; padding: 10px 14px; font-weight: 600; font-size: .86rem; color: var(--text-muted); }
+  .fm-det .qe-body { padding-top: 4px; }
+  .fm-erro { margin: 8px 22px 0; color: var(--danger); font-size: .85rem; font-weight: 600; }
+  .fm-nota { color: var(--text-muted); font-size: .82rem; margin: 0; }
+  .dk-dash { margin-bottom: 16px; }
+  .dk-dash-t { font-size: .95rem; font-weight: 700; margin: 0 0 10px; }
+  .dk-link { color: inherit; text-decoration: none; }
+  .dk-nfbadge { display: inline-block; margin-top: 3px; font-size: .7rem; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 1px 7px; border-radius: 99px; }
+
   /* Cadastros (listas) */
   .ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .ls-tab {
@@ -1237,6 +1248,7 @@
           Limpar filtros</button></div>
         <p class="dfiltro-info" id="dFiltroInfo"></p>
       </section>
+      <section class="dk-dash" id="dashDocs" aria-label="Notas fiscais e fretes"></section>
       <div id="dashConteudo">
         <div class="kpis" id="kpis"></div>
         <div class="dgrid" id="dgrid"></div>
@@ -1372,6 +1384,9 @@
           <h1>Notas Fiscais</h1>
           <p>Notas lançadas na aba Notas · verde = vinculada, amarelo = parcial, vermelho = sem solicitação</p>
         </div>
+        <div class="view-actions">
+          <button type="button" class="btn btn-primary" id="notasNovo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nova nota</button>
+        </div>
       </header>
       <section class="kpis dk-kpis" id="notasKpis" aria-label="Resumo"></section>
       <section class="filters" aria-label="Filtros">
@@ -1420,6 +1435,9 @@
           <h1>Fretes (DACTE)</h1>
           <p>CT-es lançados na aba Fretes · verde = ligado a uma NF, vermelho = sem NF</p>
         </div>
+        <div class="view-actions">
+          <button type="button" class="btn btn-primary" id="fretesNovo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo frete</button>
+        </div>
       </header>
       <section class="kpis dk-kpis" id="fretesKpis" aria-label="Resumo"></section>
       <section class="filters" aria-label="Filtros">
@@ -1447,7 +1465,7 @@
         <div class="grid-top"><div class="grid-sum" id="fretesResumo" aria-live="polite"></div></div>
         <div class="grid-scroll">
           <table class="grid dk-grid" id="fretesGrid">
-            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº CT-e</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="transp">Transportadora</button></th><th><button type="button" class="sort" data-sort="tomador">Tomador</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="nf">NF</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th></tr></thead>
+            <thead><tr><th class="g-exp-h"><span class="sr-only">Detalhes</span></th><th><button type="button" class="sort" data-sort="numero">Nº CT-e</button></th><th><button type="button" class="sort" data-sort="emissao">Emissão</button></th><th><button type="button" class="sort" data-sort="transp">Transportadora</button></th><th><button type="button" class="sort" data-sort="tomador">Tomador</button></th><th class="num"><button type="button" class="sort" data-sort="valor">Valor</button></th><th><button type="button" class="sort" data-sort="nf">NF</button></th><th><button type="button" class="sort" data-sort="sc">SC</button></th><th class="g-acoes-h">Ações</th></tr></thead>
             <tbody id="fretesBody"></tbody>
           </table>
         </div>
@@ -2800,6 +2818,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     if (bruto) { delete bruto.tbNotas; delete bruto.tbFretes; }
     window.LISTAS_PLANILHA = comoTabelas(bruto);
     DOCS = null;
+    try { renderDashDocs(); } catch (e) { }
     preencherListas();
     return true;
   }
@@ -3246,7 +3265,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       kpi('inbox', 'Em aberto', I('Em aberto (Pendente, Em Andamento, Aprovado)'), fInt, 'Indefinido, em cotação ou PC aguardando/aprovado'),
       kpi('tag', 'Aguardando NF', I('Aguardando NF (exceto canceladas)'), fInt, 'Solicitações sem nota fiscal'),
       kpi('money', 'Ticket médio', I('Ticket médio por solicitação com NF'), fBRL, 'Por solicitação com NF'),
-      kpi('check', 'Taxa de conclusão', I('Taxa de conclusão (sem canceladas)'), fPct, 'Finalizadas ou entregues, sem contar canceladas', medidor(I('Taxa de conclusão (sem canceladas)'))),
+      kpi('check', 'Taxa de conclusão', I('Taxa de conclusão (sem canceladas)'), fPct, 'Finalizadas, sem contar canceladas', medidor(I('Taxa de conclusão (sem canceladas)'))),
       kpi('split', 'Com rateio', I('Percentual com rateio'), fPct, 'Das solicitações', medidor(I('Percentual com rateio'))),
       kpi('clock', 'Prazo médio', I('Prazo médio: solicitação até entrega (dias)'), v => nfDec.format(v) + ' dias', 'Da solicitação até a entrega'),
       kpi('truck', 'Frete sobre o total', I('Frete sobre o valor total'), fPct, fBRL(I('Valor total de frete')) + ' em fretes', medidor(I('Frete sobre o valor total')))
@@ -3429,7 +3448,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', { class: 'g-exp-c' }, h('button', { type: 'button', class: 'ibtn exp', 'data-acao': 'ver', 'aria-expanded': aberto, 'aria-label': 'Ver detalhes', title: 'Ver detalhes', html: ICON_G.chev })),
       h('td', { class: 'g-id', 'data-label': 'Nº Fluig / Solicitação' },
         h('div', {}, s.fluig ? 'Fluig ' + s.fluig : h('span', { class: 'muted', text: 'Fluig —' })),
-        h('div', { class: 'g-sub', text: 'Solic. ' + (s.solicitacao || '—') })),
+        h('div', { class: 'g-sub', text: 'Solic. ' + (s.solicitacao || '—') }), (() => { const ns = docsDaSC(s); return ns && ns.length ? h('span', { class: 'dk-nfbadge', title: ns.map(n => 'NF ' + n.numero).join(', '), text: '● ' + plural(ns.length, 'NF', 'NFs') }) : null; })()),
       h('td', { 'data-label': 'Data', text: isoBR(s.dataSolicitada) }),
       h('td', { class: 'g-wrap', 'data-label': 'Solicitante', text: s.solicitante }),
       h('td', { class: 'g-prod', 'data-label': 'Produtos e Serviços', title: s.produtos }, h('span', { class: 'clamp2', text: s.produtos })),
@@ -3440,6 +3459,17 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', { class: 'g-acoes-c' }, h('div', { class: 'g-acoes' },
         h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'editar', 'aria-label': 'Editar solicitação', title: 'Editar', html: ICON_G.edit }),
         h('button', { type: 'button', class: 'ibtn del', 'data-acao': 'excluir', 'aria-label': 'Excluir solicitação', title: 'Excluir', html: ICON_G.del }))));
+  }
+  function cardDocsSC(s) {
+    const ns = docsDaSC(s);
+    if (ns == null) return null;
+    const sc = scNum(s.solicitacao || s.fluig);
+    return h('div', { class: 'gd-wide', style: 'grid-column: span 4' }, h('h4', { text: 'Notas fiscais e fretes vinculados (' + ns.length + ')' }),
+      ns.length ? h('table', {}, h('thead', {}, h('tr', {}, ['NF', 'Emissão', 'Fornecedor', 'Itens desta SC', 'Valor NF', 'Frete'].map((t, i) => h('th', { class: i >= 4 ? 'num' : '', text: t })))),
+        h('tbody', {}, ns.map(n => h('tr', {}, h('td', { text: n.numero }), h('td', { text: isoBR(n.emissao) }), h('td', { text: n.fornecedor }),
+          h('td', { text: n.itens.filter(i => i.sc === sc).map(i => i.desc).join('; ') }), h('td', { class: 'num', text: fBRL(n.valor) }),
+          h('td', { class: 'num', text: n.fretes.length ? n.fretes.map(f => (f.tomador === 'TRC' ? 'TRC ' : 'CIF ') + fBRL(f.valor)).join(' + ') : '—' })))))
+        : h('p', { class: 'gd-obs', text: 'Nenhuma nota vinculada a esta solicitação. Vincule pela tela Notas Fiscais.' }));
   }
   function linhaDetalhe(s) {
     const vt = valorTotalSol(s) || 0;
@@ -3452,7 +3482,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('div', { class: 'gd-wide' }, h('h4', { text: s.centros.length > 1 ? 'Rateio de centro de custo' : 'Centro de custo' }),
         h('table', {}, h('thead', {}, h('tr', {}, h('th', { text: 'Centro de custo' }), h('th', { class: 'num', text: 'Percentual' }), h('th', { class: 'num', text: 'Valor rateado' }))),
           h('tbody', {}, s.centros.map(c => h('tr', {}, h('td', { text: rotuloCentro(c.cc, c.descricao) }), h('td', { class: 'num', text: fPct(c.pct) }), h('td', { class: 'num', text: valorTotalSol(s) != null ? fBRL(vt * c.pct) : '—' })))))),
-      h('div', { class: 'gd-wide' }, h('h4', { text: 'Observação' }), h('p', { class: 'gd-obs', text: s.observacao || 'Sem observações.' })))));
+      h('div', { class: 'gd-wide' }, h('h4', { text: 'Observação' }), h('p', { class: 'gd-obs', text: s.observacao || 'Sem observações.' })),
+      cardDocsSC(s))));
   }
 
   function paginador(total, paginas) {
@@ -3863,6 +3894,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   async function garantirDocs() {
     if (!window.DOCS_PLANILHA) { try { await carregarListas(); } catch (e) { showToast('Falha ao carregar', 'Notas e fretes não carregaram (' + e.message + ').', 'error'); return; } }
     if (DOCS) return;
+    montarDocs();
+  }
+  function montarDocs() {
     const P = window.DOCS_PLANILHA || { notas: [], fretes: [] };
     const mapa = new Map();
     P.notas.forEach(r => {
@@ -3940,7 +3974,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', { class: 'num', text: fBRL(x.valor) }),
       h('td', {}, dkSc(x.scs)),
       h('td', {}, x.fretes.length ? h('span', { class: 'dk-tom ' + (x.fretes.some(f => f.tomador === 'TRC') ? 'trc' : 'cif'), text: x.fretes.map(f => f.tomador === 'TRC' ? 'TRC' : 'CIF').join(' + ') }) : h('span', { class: 'muted', text: '—' })),
-      h('td', { class: 'g-acoes-c' }, h('div', { class: 'g-acoes' }, h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'vincular', 'aria-label': 'Vincular à solicitação', title: 'Vincular à solicitação', html: ICON_LINK }))));
+      h('td', { class: 'g-acoes-c' }, h('div', { class: 'g-acoes' }, h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'vincular', 'aria-label': 'Vincular à solicitação', title: 'Vincular à solicitação', html: ICON_LINK }),
+        h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'editar', 'aria-label': 'Editar nota', title: 'Editar', html: ICON_G.edit }),
+        h('button', { type: 'button', class: 'ibtn del', 'data-acao': 'excluir', 'aria-label': 'Excluir nota', title: 'Excluir', html: ICON_G.del }))));
     else tr.append(exp,
       h('td', { class: 'g-id' }, h('div', { text: x.numero }), h('div', { class: 'g-sub', text: x.serie ? 'série ' + x.serie : '' })),
       h('td', { text: isoBR(x.emissao) }),
@@ -3948,7 +3984,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', {}, h('span', { class: 'dk-tom ' + (x.tomador === 'TRC' ? 'trc' : 'cif'), text: x.tomador === 'TRC' ? 'TRC' : 'CIF' })),
       h('td', { class: 'num', text: fBRL(x.valor) }),
       h('td', { text: x.nf || '—' }),
-      h('td', {}, x.sc ? dkSc(String(x.sc).split(', ')) : dkSc([])));
+      h('td', {}, x.sc ? dkSc(String(x.sc).split(', ')) : dkSc([])),
+      h('td', { class: 'g-acoes-c' }, h('div', { class: 'g-acoes' },
+        h('button', { type: 'button', class: 'ibtn edit', 'data-acao': 'editar', 'aria-label': 'Editar frete', title: 'Editar', html: ICON_G.edit }),
+        h('button', { type: 'button', class: 'ibtn del', 'data-acao': 'excluir', 'aria-label': 'Excluir frete', title: 'Excluir', html: ICON_G.del }))));
     return tr;
   }
   function dkDetalhe(v, x) {
@@ -4086,21 +4125,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       }
       let lancadas = 0;
       if (lancar) for (const sc of scs) {
-        const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === sc);
-        if (!s) continue;
-        const nfs = String(s.nf || '').split(/[,;]\s*/).filter(Boolean);
-        if (nfs.includes(n.numero)) continue;
         const valorItens = novos.filter(x => x.sc === sc).reduce((a, x) => a + ((n.itens.find(i => i.id === x.id) || {}).vi || 0), 0);
-        const valor = scs.length === 1 ? n.valor : (valorItens || 0);
-        const freteTRC = scs.length === 1 ? n.fretes.filter(f => f.tomador === 'TRC').reduce((a, f) => a + f.valor, 0) : 0;
-        s.nf = nfs.concat(n.numero).join(', ');
-        s.valorNF = Math.round(((+s.valorNF || 0) + valor) * 100) / 100;
-        if (!s.fornecedor) s.fornecedor = n.fornecedor;
-        if (!s.dataEmissao) s.dataEmissao = n.emissao;
-        if (freteTRC) { s.valorFrete = Math.round(((+s.valorFrete || 0) + freteTRC) * 100) / 100; if (!s.transportador) s.transportador = n.fretes.find(f => f.tomador === 'TRC').transp; }
-        await apiGravar('atualizar', s); lancadas++;
+        if (await lancarNaSC(n, sc, scs.length === 1 ? n.valor : valorItens, scs.length === 1)) lancadas++;
       }
-      DOCS = null; await garantirDocs(); renderDoc('notas'); if (viewAtual === 'fretes') renderDoc('fretes');
+      await recarregarDocs();
       vcDlg.close();
       showToast('Vínculo salvo', 'NF ' + n.numero + (scs.length ? ' → SC ' + scs.join(', ') : ' sem solicitação') + (lancadas ? ' · dados lançados em ' + lancadas + ' solicitação(ões)' : ''));
     } catch (e) {
@@ -4111,6 +4139,217 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const bt = e.target.closest('[data-acao="vincular"]'); if (!bt) return;
     const k = bt.closest('tr.g-row').dataset.k, n = DOCS.notas.find(y => y.k === k); if (n) abrirVinculo(n);
   });
+
+  // ===================== Cadastro / edição manual de Notas e Fretes =====================
+  const ICON_PLUS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  const ICON_X = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const novoIdDoc = p => p + '-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+  const hojeISO = () => new Date().toISOString().slice(0, 10);
+  const valorBR = n => n == null || n === '' ? '' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const lerValor = v => { const t = String(v || '').trim(); if (!t) return null; const x = +t.replace(/\./g, '').replace(',', '.'); return isNaN(x) ? NaN : x; };
+  async function lancarNaSC(n, sc, valor, inclFrete) {
+    const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === sc);
+    if (!s) return false;
+    const nfs = String(s.nf || '').split(/[,;]\s*/).filter(Boolean);
+    if (nfs.includes(n.numero)) return false;
+    s.nf = nfs.concat(n.numero).join(', ');
+    s.valorNF = Math.round(((+s.valorNF || 0) + (valor || 0)) * 100) / 100;
+    if (!s.fornecedor) s.fornecedor = n.fornecedor;
+    if (!s.dataEmissao) s.dataEmissao = n.emissao;
+    const ft = inclFrete ? n.fretes.filter(f => f.tomador === 'TRC') : [];
+    if (ft.length) { s.valorFrete = Math.round(((+s.valorFrete || 0) + ft.reduce((a, f) => a + f.valor, 0)) * 100) / 100; if (!s.transportador) s.transportador = ft[0].transp; }
+    await apiGravar('atualizar', s);
+    return true;
+  }
+  const fmDlg = h('dialog', { class: 'qedit fm-dlg', 'aria-labelledby': 'fmTitle' });
+  document.body.append(fmDlg);
+  const campo = (rot, el, obrig, larg = 6) => h('div', { class: 'field fm-f', style: 'grid-column: span ' + larg }, h('label', { text: rot + (obrig ? ' *' : '') }), el);
+  const inp = (id, val, extra = {}) => h('input', Object.assign({ id, value: val == null ? '' : val, autocomplete: 'off' }, extra));
+  function selSC(atual) {
+    const lst = (SOL || []).filter(s => s.solicitacao || s.fluig).slice().sort((a, b) => (+b.solicitacao || 0) - (+a.solicitacao || 0));
+    return h('select', { id: 'fmSC' }, h('option', { value: '', text: '— sem solicitação (vincular depois) —' }),
+      lst.map(s => { const sc = scNum(s.solicitacao || s.fluig); return h('option', { value: sc, selected: sc === atual, text: sc + ' · ' + isoBR(s.dataSolicitada) + ' · ' + (s.produtos || '').slice(0, 60) + (s.nf ? ' · já tem NF ' + s.nf : '') }); }));
+  }
+  function datalist(id, vals) { return h('datalist', { id }, [...new Set(vals.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(v => h('option', { value: v }))); }
+  function listaPlanilha(tb, col) { const t = (window.LISTAS_PLANILHA || {})[tb]; return t ? t.linhas.map(l => l[col] || Object.values(l).find(v => typeof v === 'string')) : []; }
+  function montarForm(titulo, sub, corpo, detalhes, onSalvar, rotSalvar) {
+    const det = h('details', { class: 'fm-det' }, h('summary', { text: 'Mais detalhes (opcional)' }), h('div', { class: 'qe-body' }, detalhes));
+    fmDlg.replaceChildren(h('form', { method: 'dialog', novalidate: true },
+      h('header', { class: 'qe-head' }, h('div', {}, h('h3', { id: 'fmTitle', text: titulo }), h('p', { text: sub })), h('button', { type: 'button', class: 'sb-icon-btn', 'aria-label': 'Fechar', onclick: () => fmDlg.close(), html: ICON_X })),
+      h('div', { class: 'qe-body' }, corpo), detalhes.length ? det : null,
+      h('p', { class: 'fm-erro', id: 'fmErro', hidden: true }),
+      h('footer', { class: 'qe-foot' }, h('button', { type: 'button', class: 'btn btn-neutral', text: 'Cancelar', onclick: () => fmDlg.close() }),
+        h('button', { type: 'button', class: 'btn btn-primary', id: 'fmSalvar', text: rotSalvar || 'Salvar', onclick: async () => {
+          const bt = fEl('fmSalvar'); fEl('fmErro').hidden = true;
+          bt.disabled = true; bt.classList.add('btn-carregando');
+          try { const msg = await onSalvar(); if (msg) { fEl('fmErro').textContent = msg; fEl('fmErro').hidden = false; } else fmDlg.close(); }
+          catch (e) { showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error'); }
+          finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
+        } }))));
+    fmDlg.showModal();
+  }
+  const val = id => (fEl(id).value || '').trim();
+  async function recarregarDocs() { DOCS = null; await garantirDocs(); ['notas', 'fretes'].forEach(v => renderDoc(v)); renderDashDocs(); }
+
+  async function formNota(n) {
+    await garantirSolicitacoes();
+    const edit = !!n, it0 = n && n.itens.length === 1 ? n.itens[0] : null;
+    const forn = listaPlanilha('tbListaFornecedor', 'Fornecedor').concat((DOCS ? DOCS.notas : []).map(x => x.fornecedor));
+    const corpo = [
+      campo('Nº NF', inp('fmNum', n && n.numero, { inputmode: 'numeric' }), 1, 3),
+      campo('Emissão', inp('fmEmi', n && n.emissao, { type: 'date' }), 1, 3),
+      campo('Valor total da NF (R$)', inp('fmValor', n && valorBR(n.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 6),
+      campo('Fornecedor', inp('fmForn', n && n.fornecedor, { list: 'fmFornL' }), 1, 12), datalist('fmFornL', forn),
+      (!edit || it0) ? campo('Descrição', inp('fmDesc', it0 && it0.desc), 1, 12) : h('p', { class: 'fm-nota', style: 'grid-column: span 12', text: 'Nota com ' + n.itens.length + ' itens: a descrição de cada item não é editada aqui.' }),
+      edit ? null : campo('Solicitação (opcional)', selSC(''), 0, 12),
+      edit ? null : h('label', { class: 'vc-chk', style: 'grid-column: span 12' }, h('input', { type: 'checkbox', id: 'fmLancar', checked: true }), ' Lançar os dados da NF na solicitação escolhida')
+    ];
+    const detalhes = [
+      campo('Série', inp('fmSerie', n && n.serie), 0, 3),
+      campo('Modelo', h('select', { id: 'fmModelo' }, ['NF-e', 'NFS-e', 'NFC-e', 'Outro'].map(m => h('option', { value: m, text: m, selected: n ? n.modelo === m : m === 'NF-e' }))), 0, 3),
+      campo('CNPJ do fornecedor', inp('fmCnpj', n && n.cnpj), 0, 6),
+      campo('Chave NF-e (44 dígitos)', inp('fmChave', n && n.chave, { inputmode: 'numeric', maxlength: 44 }), 0, 12),
+      (!edit || it0) ? campo('Quantidade', inp('fmQtd', it0 && it0.qtd), 0, 3) : null,
+      (!edit || it0) ? campo('Unidade', inp('fmUn', it0 && it0.un), 0, 3) : null,
+      campo('Arquivo (PDF)', inp('fmArq', n && n.arquivo), 0, 6),
+      campo('Observação', h('textarea', { id: 'fmObs', text: n ? n.obs : '' }), 0, 12)
+    ].filter(Boolean);
+    montarForm(edit ? 'Editar NF ' + n.numero : 'Nova nota fiscal', edit ? n.fornecedor : 'Campos com * são obrigatórios', corpo, detalhes, async () => {
+      const num = val('fmNum').replace(/^0+(?=\d)/, ''), emi = val('fmEmi'), forn = val('fmForn'), valor = lerValor(val('fmValor')), desc = fEl('fmDesc') ? val('fmDesc') : null;
+      if (!num || !emi || !forn || valor == null || (fEl('fmDesc') && !desc)) return 'Preencha os campos obrigatórios: Nº NF, emissão, fornecedor, descrição e valor.';
+      if (isNaN(valor) || valor <= 0) return 'Valor inválido.';
+      const chave = val('fmChave').replace(/\D/g, '');
+      if (chave && chave.length !== 44) return 'A chave da NF-e precisa ter 44 dígitos.';
+      const dup = DOCS.notas.find(x => x.numero === num && norm(x.fornecedor) === norm(forn) && x !== n);
+      if (dup) return 'Já existe a NF ' + num + ' desse fornecedor.';
+      const qtd = fEl('fmQtd') ? lerValor(val('fmQtd')) : null;
+      const cab = { NumeroNF: num, Serie: val('fmSerie'), Modelo: fEl('fmModelo').value, DataEmissao: emi, Fornecedor: forn, CNPJFornecedor: val('fmCnpj'), ChaveNFe: chave, ValorTotalNF: String(valor), ArquivoPDF: val('fmArq'), Observacao: val('fmObs') };
+      if (edit) {
+        for (const i of n.itens) {
+          const item = Object.assign({}, cab, it0 ? { DescricaoItem: desc, Quantidade: qtd == null ? '' : String(qtd), Unidade: val('fmUn'), ValorItem: String(valor), ValorUnitario: qtd ? String(Math.round(valor / qtd * 100) / 100) : '' } : {});
+          await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: i.id, item });
+          const r = window.DOCS_PLANILHA.notas.find(y => y.ID === i.id); if (r) Object.assign(r, item);
+        }
+        for (const f of n.fretes) if (f.nf !== num || f.chaveNF !== chave) {
+          await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { NumeroNF: num, ChaveNFe: chave } });
+          const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) Object.assign(r, { NumeroNF: num, ChaveNFe: chave });
+        }
+        await recarregarDocs(); showToast('Nota atualizada', 'NF ' + num + ' salva na planilha.'); return;
+      }
+      const sc = fEl('fmSC').value;
+      const item = Object.assign({ ID: novoIdDoc('NF'), ItemNF: '1 de 1', DescricaoItem: desc, Quantidade: qtd == null ? '' : String(qtd), Unidade: val('fmUn'), ValorUnitario: qtd ? String(Math.round(valor / qtd * 100) / 100) : '', ValorItem: String(valor),
+        NSolicitacao: sc, StatusVinculo: sc ? 'Vinculada' : 'Sem SC', DataVinculo: sc ? hojeISO() : '', VinculadoPor: sc ? 'Compras TRC' : '', DataCadastro: hojeISO() }, cab);
+      await chamarFluxo('listasCrud', 'POST', { acao: 'criar', tabela: 'tbNotas', item });
+      window.DOCS_PLANILHA.notas.push(item);
+      await recarregarDocs();
+      let lanc = false;
+      if (sc && fEl('fmLancar').checked) { const nn = DOCS.notas.find(x => x.itens.some(i => i.id === item.ID)); if (nn) lanc = await lancarNaSC(nn, sc, valor, true); }
+      showToast('Nota cadastrada', 'NF ' + num + (sc ? ' vinculada à SC ' + sc + (lanc ? ' e lançada na solicitação' : '') : ' sem solicitação (vincule pelo botão 🔗)'));
+    }, edit ? 'Salvar alterações' : 'Cadastrar nota');
+  }
+
+  function formFrete(f) {
+    const edit = !!f;
+    const notas = (DOCS ? DOCS.notas : []).slice().sort((a, b) => (b.emissao || '').localeCompare(a.emissao || ''));
+    const transp = listaPlanilha('tbListaTransportador', 'Transportador').concat((DOCS ? DOCS.fretes : []).map(x => x.transp));
+    const atualNota = f && f.nota ? f.nota.k : '';
+    const corpo = [
+      campo('Nota fiscal transportada', h('select', { id: 'ffNota' }, h('option', { value: '', text: '— escolha a NF —' }), notas.map(n => h('option', { value: n.k, selected: n.k === atualNota, text: n.numero + ' · ' + n.fornecedor.slice(0, 40) + ' · ' + isoBR(n.emissao) + (n.scs.length ? ' · SC ' + n.scs.join(', ') : '') }))), 1, 12),
+      campo('Transportadora', inp('ffTransp', f && f.transp, { list: 'ffTranspL' }), 1, 12), datalist('ffTranspL', transp),
+      campo('Valor do frete (R$)', inp('ffValor', f && valorBR(f.valor), { inputmode: 'decimal', placeholder: '0,00' }), 1, 6),
+      campo('Tomador (quem paga)', h('select', { id: 'ffTom' }, [['TRC', 'TRC (entra no custo)'], ['Fornecedor (CIF)', 'Fornecedor (CIF)']].map(([v, t]) => h('option', { value: v, text: t, selected: f ? f.tomador === v : v === 'TRC' }))), 1, 6),
+      edit ? null : h('label', { class: 'vc-chk', style: 'grid-column: span 12' }, h('input', { type: 'checkbox', id: 'ffLancar', checked: true }), ' Se o tomador for TRC e a NF tiver solicitação, somar o frete na solicitação')
+    ];
+    const detalhes = [
+      campo('Nº CT-e', inp('ffNum', f && f.numero, { inputmode: 'numeric' }), 0, 4),
+      campo('Série', inp('ffSerie', f && f.serie), 0, 2),
+      campo('Emissão', inp('ffEmi', f && f.emissao, { type: 'date' }), 0, 6),
+      campo('CNPJ da transportadora', inp('ffCnpj', f && f.cnpj), 0, 6),
+      campo('Remetente', inp('ffRem', f && f.remetente), 0, 6),
+      campo('Chave CT-e (44 dígitos)', inp('ffChave', f && f.chave, { inputmode: 'numeric', maxlength: 44 }), 0, 12),
+      campo('Arquivo (PDF)', inp('ffArq', f && f.arquivo), 0, 6),
+      campo('Observação', h('textarea', { id: 'ffObs', text: f ? f.obs : '' }), 0, 12)
+    ];
+    montarForm(edit ? 'Editar CT-e ' + (f.numero || '') : 'Novo frete (DACTE)', 'Campos com * são obrigatórios', corpo, detalhes, async () => {
+      const n = DOCS.notas.find(x => x.k === fEl('ffNota').value), transpV = val('ffTransp'), valor = lerValor(val('ffValor')), tom = fEl('ffTom').value;
+      if (!n || !transpV || valor == null) return 'Preencha os campos obrigatórios: nota fiscal, transportadora, valor e tomador.';
+      if (isNaN(valor) || valor <= 0) return 'Valor inválido.';
+      const chave = val('ffChave').replace(/\D/g, '');
+      if (chave && chave.length !== 44) return 'A chave do CT-e precisa ter 44 dígitos.';
+      const item = { NumeroCTe: val('ffNum'), Serie: val('ffSerie'), DataEmissao: val('ffEmi'), Transportadora: transpV, CNPJTransportadora: val('ffCnpj'), Remetente: val('ffRem') || n.fornecedor, Destinatario: 'TRC AGROFLORESTAL LTDA',
+        Tomador: tom === 'TRC' ? 'TRC AGROFLORESTAL LTDA' : n.fornecedor, TomadorFrete: tom, ValorFrete: String(valor), ChaveCTe: chave, ChaveNFe: n.chave || '', NumeroNF: n.numero, NSolicitacao: n.scs.join(', '), StatusVinculo: 'Com NF', ArquivoPDF: val('ffArq'), Observacao: val('ffObs') };
+      if (edit) {
+        await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item });
+        const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) Object.assign(r, item);
+        await recarregarDocs(); showToast('Frete atualizado', 'CT-e salvo na planilha.'); return;
+      }
+      Object.assign(item, { ID: novoIdDoc('CT'), DataCadastro: hojeISO() });
+      await chamarFluxo('listasCrud', 'POST', { acao: 'criar', tabela: 'tbFretes', item });
+      window.DOCS_PLANILHA.fretes.push(item);
+      let somou = 0;
+      if (tom === 'TRC' && fEl('ffLancar').checked && n.scs.length === 1) {
+        await garantirSolicitacoes();
+        const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === n.scs[0]);
+        if (s) { s.valorFrete = Math.round(((+s.valorFrete || 0) + valor) * 100) / 100; if (!s.transportador) s.transportador = transpV; await apiGravar('atualizar', s); somou = 1; }
+      }
+      await recarregarDocs();
+      showToast('Frete cadastrado', 'CT-e da NF ' + n.numero + (somou ? ' · frete somado na SC ' + n.scs[0] : (tom === 'TRC' && n.scs.length > 1 ? ' · NF com várias SCs: frete não somado automaticamente' : '')));
+    }, edit ? 'Salvar alterações' : 'Cadastrar frete');
+  }
+
+  async function excluirDoc(v, x) {
+    const nota = v === 'notas';
+    const ok = await confirmDuplo({
+      titulo: nota ? 'Excluir NF ' + x.numero + '?' : 'Excluir CT-e ' + (x.numero || '') + '?',
+      mensagem: nota ? x.fornecedor + ' · ' + fBRL(x.valor) + ' · ' + plural(x.itens.length, 'item', 'itens') : x.transp + ' · ' + fBRL(x.valor),
+      mensagem2: nota ? 'A nota sai da aba Notas. Os dados já lançados na solicitação (nº e valor da NF) não são desfeitos automaticamente; os fretes ligados ficam como "Sem NF".' : 'O CT-e sai da aba Fretes. Um valor de frete já somado na solicitação não é desfeito automaticamente.',
+      confirmar: 'Sim, excluir'
+    });
+    if (!ok) return;
+    try {
+      if (nota) {
+        for (const i of x.itens) await chamarFluxo('listasCrud', 'POST', { acao: 'excluir', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: i.id });
+        window.DOCS_PLANILHA.notas = window.DOCS_PLANILHA.notas.filter(r => !x.itens.some(i => i.id === r.ID));
+        for (const f of x.fretes) {
+          await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { StatusVinculo: 'Sem NF', NSolicitacao: '' } });
+          const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) Object.assign(r, { StatusVinculo: 'Sem NF', NSolicitacao: '' });
+        }
+      } else {
+        await chamarFluxo('listasCrud', 'POST', { acao: 'excluir', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: x.id });
+        window.DOCS_PLANILHA.fretes = window.DOCS_PLANILHA.fretes.filter(r => r.ID !== x.id);
+      }
+      await recarregarDocs();
+      showToast(nota ? 'Nota excluída' : 'Frete excluído', 'Registro removido da planilha.');
+    } catch (e) { showToast('Falha ao excluir', 'A planilha não respondeu (' + e.message + ').', 'error'); }
+  }
+  fEl('notasNovo').addEventListener('click', () => formNota(null));
+  fEl('fretesNovo').addEventListener('click', () => formFrete(null));
+  ['notas', 'fretes'].forEach(v => fEl(v + 'Body').addEventListener('click', e => {
+    const bt = e.target.closest('[data-acao="editar"],[data-acao="excluir"]'); if (!bt) return;
+    const k = bt.closest('tr.g-row').dataset.k, x = DOCS[v].find(y => String(y.k || y.id) === k); if (!x) return;
+    if (bt.dataset.acao === 'excluir') excluirDoc(v, x); else if (v === 'notas') formNota(x); else formFrete(x);
+  }));
+
+  // ===================== Integração: Dashboard e Solicitações =====================
+  function renderDashDocs() {
+    const el = fEl('dashDocs'); if (!el || !window.DOCS_PLANILHA) return;
+    if (!DOCS) montarDocs();
+    const N = DOCS.notas, F = DOCS.fretes, soma = a => a.reduce((t, x) => t + (x.valor || 0), 0);
+    const vin = N.filter(n => n.status === 'Vinculada'), sem = N.filter(n => n.status !== 'Vinculada');
+    const trc = F.filter(f => f.tomador === 'TRC'), cif = F.filter(f => f.tomador !== 'TRC');
+    const card = (rot, v, sub, cor, href) => h('a', { class: 'kpi dk-link', href }, h('div', { class: 'kpi-label' }, h('span', { class: 'kpi-ic', style: 'background:' + cor + '22;color:' + cor, text: '●' }), rot), h('div', { class: 'kpi-value', text: v }), h('div', { class: 'kpi-sub', text: sub }));
+    el.replaceChildren(h('h2', { class: 'dk-dash-t', text: 'Notas fiscais e fretes' }), h('div', { class: 'kpis dk-kpis' },
+      card('Notas vinculadas', fInt(vin.length) + ' de ' + fInt(N.length), fBRL(soma(vin)), '#16a34a', '#notas'),
+      card('Notas sem solicitação', fInt(sem.length), fBRL(soma(sem)), '#e34948', '#notas'),
+      card('Frete pago pela TRC', fBRL(soma(trc)), plural(trc.length, 'CT-e', 'CT-es') + ' · entra no custo', '#2a78d6', '#fretes'),
+      card('Frete CIF', fBRL(soma(cif)), plural(cif.length, 'CT-e', 'CT-es') + ' · não soma', '#94a3b8', '#fretes')));
+  }
+  function docsDaSC(s) {
+    if (!window.DOCS_PLANILHA) return null;
+    if (!DOCS) montarDocs();
+    const sc = scNum(s.solicitacao || s.fluig);
+    return sc ? DOCS.notas.filter(n => n.itens.some(i => i.sc === sc)) : [];
+  }
 
   // ===================== Inicialização =====================
   (async function iniciar() {
