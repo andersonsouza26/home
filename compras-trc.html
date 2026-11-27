@@ -4440,6 +4440,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const bt = fEl('vcSalvar'); bt.disabled = true; bt.classList.add('btn-carregando');
     loaderOn('Salvando vínculo…');
     try {
+      const antes = valorPorSC(n, n.itens);
+      const depoisScs = new Set(novos.map(x => x.sc).filter(Boolean));
+      let retiradas = 0;
       for (const x of mud) {
         await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: x.id,
           item: { NSolicitacao: x.sc, StatusVinculo: x.sc ? 'Vinculada' : 'Sem SC', DataVinculo: x.sc ? hoje : '', VinculadoPor: x.sc ? 'Compras TRC' : '' } });
@@ -4453,6 +4456,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { NSolicitacao: v } });
         const r = window.DOCS_PLANILHA.fretes.find(y => y.ID === f.id); if (r) r.NSolicitacao = v;
       }
+      // SC que deixou de ter vínculo com esta NF: apaga os dados da NF nela e volta o status
+      for (const sc of Object.keys(antes)) if (!depoisScs.has(sc) && await retirarDaSC(n, sc, antes[sc])) retiradas++;
       let lancadas = 0;
       if (lancar) for (const sc of scs) {
         const valorItens = novos.filter(x => x.sc === sc).reduce((a, x) => a + ((n.itens.find(i => i.id === x.id) || {}).vi || 0), 0);
@@ -4460,7 +4465,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       }
       await recarregarDocs();
       vcDlg.close();
-      showToast('Vínculo salvo', 'NF ' + n.numero + (scs.length ? ' → SC ' + scs.join(', ') : ' sem solicitação') + (lancadas ? ' · dados lançados em ' + lancadas + ' solicitação(ões)' : ''));
+      showToast('Vínculo salvo', 'NF ' + n.numero + (scs.length ? ' → SC ' + scs.join(', ') : ' sem solicitação') + (lancadas ? ' · dados lançados em ' + lancadas + ' solicitação(ões)' : '') + (retiradas ? ' · dados da NF retirados de ' + retiradas + ' solicitação(ões) (status: ' + STATUS_DESVINCULO + ')' : ''));
     } catch (e) {
       showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error');
     } finally { loaderOff(); bt.disabled = false; bt.classList.remove('btn-carregando'); }
@@ -4477,6 +4482,34 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const hojeISO = () => new Date().toISOString().slice(0, 10);
   const valorBR = n => n == null || n === '' ? '' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const lerValor = v => { const t = String(v || '').trim(); if (!t) return null; const x = +t.replace(/\./g, '').replace(',', '.'); return isNaN(x) ? NaN : x; };
+  // Desfaz o lançamento da NF na solicitação (ao retirar o vínculo ou excluir a nota): não deixa rastro da nota
+  const STATUS_DESVINCULO = 'PC Aguardando Aprovação em atraso';
+  async function retirarDaSC(n, sc, valor) {
+    await garantirSolicitacoes();
+    const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === sc);
+    if (!s) return false;
+    const nfs = String(s.nf || '').split(/[,;]\s*/).filter(Boolean);
+    if (!nfs.includes(n.numero)) return false;
+    const resto = nfs.filter(x => x !== n.numero);
+    s.nf = resto.join(', ');
+    if (resto.length) {
+      // Ainda há outra NF na solicitação: tira só a parte desta nota
+      s.valorNF = Math.max(0, Math.round(((+s.valorNF || 0) - (valor || 0)) * 100) / 100);
+      const ft = n.fretes.filter(f => f.tomador === 'TRC').reduce((a, f) => a + f.valor, 0);
+      if (ft) { const v = Math.round(((+s.valorFrete || 0) - ft) * 100) / 100; s.valorFrete = v > 0 ? v : null; if (!s.valorFrete) s.transportador = ''; }
+    } else {
+      s.valorNF = null; s.fornecedor = ''; s.dataEmissao = null; s.dataEntrega = null; s.transportador = ''; s.valorFrete = null;
+    }
+    s.status = STATUS_DESVINCULO;
+    await apiGravar('atualizar', s);
+    return true;
+  }
+  // Valor da NF que foi lançado em cada SC (mesma regra do lançamento: 1 SC = valor total; várias = soma dos itens)
+  function valorPorSC(n, itens) {
+    const scs = [...new Set(itens.map(i => i.sc).filter(Boolean))], m = {};
+    scs.forEach(sc => { m[sc] = scs.length === 1 ? n.valor : itens.filter(i => i.sc === sc).reduce((a, i) => a + (i.vi || 0), 0); });
+    return m;
+  }
   async function lancarNaSC(n, sc, valor, inclFrete) {
     const s = (SOL || []).find(y => scNum(y.solicitacao || y.fluig) === sc);
     if (!s) return false;
@@ -4665,14 +4698,17 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const ok = await confirmDuplo({
       titulo: nota ? 'Excluir NF ' + x.numero + '?' : 'Excluir CT-e ' + (x.numero || '') + '?',
       mensagem: nota ? x.fornecedor + ' · ' + fBRL(x.valor) + ' · ' + plural(x.itens.length, 'item', 'itens') : x.transp + ' · ' + fBRL(x.valor),
-      mensagem2: nota ? 'A nota sai da aba Notas. Os dados já lançados na solicitação (nº e valor da NF) não são desfeitos automaticamente; os fretes ligados ficam como "Sem NF".' : 'O CT-e sai da aba Fretes. Um valor de frete já somado na solicitação não é desfeito automaticamente.',
+      mensagem2: nota ? 'A nota sai da aba Notas' + (x.scs.length ? ', e os dados dela são apagados da(s) solicitação(ões) ' + x.scs.join(', ') + ' (status volta para ' + STATUS_DESVINCULO + ')' : '') + '. Os fretes ligados ficam como "Sem NF".' : 'O CT-e sai da aba Fretes. Um valor de frete já somado na solicitação não é desfeito automaticamente.',
       confirmar: 'Sim, excluir'
     });
     if (!ok) return;
     loaderOn(nota ? 'Excluindo nota…' : 'Excluindo frete…');
     try {
       if (nota) {
+        const porSC = valorPorSC(x, x.itens);
         for (const i of x.itens) await chamarFluxo('listasCrud', 'POST', { acao: 'excluir', tabela: 'tbNotas', chaveColuna: 'ID', chaveValor: i.id });
+        // Nota excluída confirmada → apaga os dados dela das solicitações vinculadas
+        for (const sc of Object.keys(porSC)) await retirarDaSC(x, sc, porSC[sc]);
         window.DOCS_PLANILHA.notas = window.DOCS_PLANILHA.notas.filter(r => !x.itens.some(i => i.id === r.ID));
         for (const f of x.fretes) {
           await chamarFluxo('listasCrud', 'POST', { acao: 'atualizar', tabela: 'tbFretes', chaveColuna: 'ID', chaveValor: f.id, item: { StatusVinculo: 'Sem NF', NSolicitacao: '' } });
