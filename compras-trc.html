@@ -418,6 +418,19 @@
   .cc-box.multi .cc-remove { display: grid; }
   .cc-box.multi .cc-labels .spacer { display: block; }
 
+  .cc-modelo { display: none; margin-bottom: 12px; }
+  .cc-box.multi.tem-modelo .cc-modelo { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .cc-modelo label { font-size: .84rem; font-weight: 600; }
+  .cc-modelo .hint { margin: 0; }
+  /* Cadastros › Rateios pré-definidos */
+  .mr-cc { display: flex; flex-direction: column; gap: 2px; font-size: .84rem; }
+  .mr-cc span b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mr-rows { grid-column: span 12; display: flex; flex-direction: column; gap: 8px; }
+  .mr-row { display: grid; grid-template-columns: 1fr 120px 40px; gap: 8px; align-items: center; }
+  .mr-tools { grid-column: span 12; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .mr-total { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mr-total.ok { color: var(--success, #16a34a); }
+  .mr-total.erro { color: var(--danger); }
   .cc-tools { display: none; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
   .cc-box.multi .cc-tools { display: flex; }
   .btn-sm {
@@ -1682,6 +1695,11 @@
         </div>
         <div class="field col-9 cc-col">
           <div class="cc-box" id="ccBox">
+            <div class="cc-modelo" id="ccModeloBox">
+              <label for="ccModelo">Tipo de rateio</label>
+              <select id="ccModelo" data-vazio><option value="">Rateio customizado (manual)</option></select>
+              <span class="hint">Escolha um rateio pré-definido para preencher os centros e percentuais (você ainda pode ajustar). Os valores são copiados para a solicitação.</span>
+            </div>
             <div class="cc-labels">
               <label for="cc0Btn">Centro de Custo <span class="req">*</span></label>
               <label>Percentual</label>
@@ -2366,7 +2384,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const ccAdd = document.getElementById('ccAdd');
   const ccTotal = document.getElementById('ccTotal');
   const rateioSel = document.getElementById('rateio');
-  const CC_MAX = 10;
+  const CC_MAX = 20;
   let ccPronto = false; // evita animar na carga inicial
   const RING_C = 2 * Math.PI * 42;
   const rateioHint = document.querySelector('.rateio-hint');
@@ -2418,6 +2436,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   function refresh() {
     const multi = isMulti();
     ccBox.classList.toggle('multi', multi);
+    ccBox.classList.toggle('tem-modelo', modelosRateio().size > 0);
     autoFill();
     const list = rows();
     list.forEach((r, i) => {
@@ -2457,6 +2476,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const first = list[0] ? list[0].querySelector('.cc-name').value : '';
     ccRows.innerHTML = '';
     ccValidado = false;
+    const mSel = document.getElementById('ccModelo');
+    if (mSel && mSel.value) { mSel.value = ''; mSel.dispatchEvent(new Event('change')); }
     if (isMulti()) {
       createRow(first, '');
       createRow('', '');
@@ -2565,6 +2586,30 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     else t.value = pctFmt(pctParse(t.value));
   });
   rateioSel.addEventListener('change', setMode);
+
+  // ===== Rateio pré-definido (tbListaModeloRateio): copia centros e percentuais para o formulário =====
+  const ccModelo = document.getElementById('ccModelo');
+  ccModelo.addEventListener('change', async () => {
+    const nome = ccModelo.value;
+    if (!nome || ccModelo._aplicando) return;
+    const itens = modelosRateio().get(nome);
+    if (!itens || !itens.length) return;
+    const temDados = rows().some(r => r.querySelector('.cc-name').value);
+    if (temDados) {
+      const ok = await confirmDuplo({
+        titulo: 'Aplicar rateio pré-definido?',
+        mensagem: 'Os centros de custo e percentuais atuais serão substituídos pelo rateio "' + nome + '" (' + itens.length + ' centros).',
+        confirmar: 'Sim, aplicar', tom: 'primary'
+      });
+      if (!ok) { ccModelo._aplicando = true; ccModelo.value = ''; ccModelo.dispatchEvent(new Event('change')); ccModelo._aplicando = false; return; }
+    }
+    ccRows.innerHTML = '';
+    ccValidado = false;
+    itens.slice(0, CC_MAX).forEach(it => { const r = createRow(it.cc, pctFmt(Math.round(it.pct * 10000) / 100)); r.dataset.manual = '1'; });
+    refresh();
+    play(rows(), { opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }, { ...MOLA, delay: M && M.stagger(.04) });
+    showToast('Rateio aplicado', nome + ': ' + itens.length + ' centros de custo preenchidos.');
+  });
 
   // Retorna '' quando o rateio está válido, ou uma mensagem curta para o toast.
   function validarRateio(rolar = true) {
@@ -2824,6 +2869,26 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     return t.linhas.filter(l => l[a.coluna] != null && String(l[a.coluna]).trim() !== '')
       .map(l => ({ valor: String(l[a.coluna]).trim(), rotulo: String((b && l[b.coluna]) || l[a.coluna]).trim() }));
   }
+  // Modelos de rateio: tbListaModeloRateio (Modelo | CentroCusto | Descricao | Percentual em fração), 1 linha por centro
+  const MR_TB = 'tbListaModeloRateio';
+  function modelosRateio() {
+    const t = (window.LISTAS_PLANILHA || {}).tbListaModeloRateio, m = new Map();
+    (t ? t.linhas : []).forEach(l => {
+      const n = String(l.Modelo ?? '').trim(); if (!n) return;
+      let p = parseFloat(String(l.Percentual ?? '').replace(',', '.')) || 0;
+      if (p > 1) p = p / 100;
+      if (!m.has(n)) m.set(n, []);
+      m.get(n).push({ cc: String(l.CentroCusto ?? '').trim(), desc: String(l.Descricao ?? '').trim(), pct: p });
+    });
+    return new Map([...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')));
+  }
+  function preencherModelosRateio() {
+    const sel = document.getElementById('ccModelo'); if (!sel) return;
+    const atual = sel.value, ms = modelosRateio();
+    sel.replaceChildren(sel.options[0], ...[...ms.entries()].map(([n, it]) => new Option(n + ' (' + it.length + ' centros)', n)));
+    sel._aplicando = true; sel.value = ms.has(atual) ? atual : ''; sel.dispatchEvent(new Event('change')); sel._aplicando = false;
+    const box = document.getElementById('ccBox'); if (box) box.classList.toggle('tem-modelo', ms.size > 0);
+  }
   function listaNaoCarregada(el) {
     return !!(el && el.tagName === 'SELECT' && el.dataset.lista && !(window.LISTAS_PLANILHA || {})[(lerRefLista(el.dataset.lista) || {}).tabela]);
   }
@@ -2843,6 +2908,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       el.value = atual;
       el.dispatchEvent(new Event('change'));
     });
+    preencherModelosRateio();
   }
   // ===================== Ligação com o Power Automate =====================
   // ===== Loader: aparece em toda gravação/exclusão até o Power Automate responder =====
@@ -3889,7 +3955,9 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     { tb: 'tbListaStatus',        nome: 'Status',         item: 'status',       cols: [{ c: 'Status', req: 1, fixo: 1 }, { c: 'Cor', cor: 1 }], soEditar: 1,
       nota: 'Lista fixa do sistema: só a cor pode ser alterada (o painel e os filtros dependem destes nomes).' },
     { tb: 'tbListaRateio',        nome: 'Rateio',         item: 'rateio',       cols: [{ c: 'Rateio', fixo: 1 }], soLeitura: 1,
-      nota: 'Lista fixa do sistema (Sim/Não): somente leitura.' }
+      nota: 'Lista fixa do sistema (Sim/Não): somente leitura.' },
+    { tb: 'tbListaModeloRateio',  nome: 'Rateios pré-definidos', item: 'rateio pré-definido', cols: [{ c: 'Modelo', req: 1 }], especial: 'modelo',
+      nota: 'Modelos usados no formulário (Rateio = Sim › Tipo de rateio). Alterar um modelo NÃO muda as solicitações já gravadas: os percentuais são copiados no momento do cadastro.' }
   ];
   const LS = { atual: LISTAS_DEF[0].tb, edit: null };
   const lsDef = tb => LISTAS_DEF.find(d => d.tb === tb);
@@ -3909,9 +3977,10 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const d = lsDef(LS.atual);
     // abas
     fEl('lsTabs').replaceChildren(...LISTAS_DEF.map(x => lsEl('button', { type: 'button', class: 'ls-tab', role: 'tab', 'aria-selected': String(x.tb === LS.atual), 'data-tb': x.tb },
-      x.nome, lsEl('span', { class: 'n', text: String(lsLinhas(x.tb).length) }))));
+      x.nome, lsEl('span', { class: 'n', text: String(x.especial ? modelosRateio().size : lsLinhas(x.tb).length) }))));
     fEl('lsNota').textContent = d.nota || (FONTE_DADOS.modo === 'api' ? 'Alterações gravam direto na planilha. Itens excluídos continuam nas solicitações antigas.' : 'Modo simulação: as alterações não são gravadas.');
     const novo = fEl('lsNovo'); novo.hidden = !!(d.soEditar || d.soLeitura); fEl('lsNovoTxt').textContent = 'Novo ' + d.item;
+    if (d.especial) return renderModelos(d);
     // cabeçalho
     const somenteLeitura = !!d.soLeitura;
     fEl('lsHead').replaceChildren(...d.cols.map(c => lsEl('th', { class: c.num ? '' : '' , text: c.c })), ...(somenteLeitura ? [] : [lsEl('th', { class: 'g-acoes-h', text: 'Ações' })]));
@@ -3939,6 +4008,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   const lsDlg = fEl('lsDlg');
   function abrirLs(linha) {
     const d = lsDef(LS.atual);
+    if (d.especial) return abrirModelo(linha ? linha.Modelo : null);
     LS.edit = linha ? lsChave(d, linha) : null;
     fEl('lsDlgTitle').textContent = (linha ? 'Editar ' : 'Novo ') + d.item;
     fEl('lsDlgSub').textContent = d.nome + (linha ? ' · ' + LS.edit : '');
@@ -3974,6 +4044,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   fEl('lsForm').addEventListener('submit', async e => {
     e.preventDefault();
     const d = lsDef(LS.atual), editando = LS.edit != null;
+    if (d.especial) return salvarModelo(d);
     lsDlg.querySelectorAll('.invalid').forEach(x => x.classList.remove('invalid'));
     const item = {}; let erro = '';
     d.cols.forEach((c, i) => {
@@ -4000,6 +4071,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   fEl('lsBody').addEventListener('click', async e => {
     const b = e.target.closest('[data-ls]'); if (!b) return;
     const d = lsDef(LS.atual), chave = b.closest('tr').dataset.chave;
+    if (d.especial) return b.dataset.ls === 'editar' ? abrirModelo(chave) : excluirModelo(d, chave);
     const linha = lsLinhas(d.tb).find(l => lsChave(d, l) === chave);
     if (!linha) return;
     if (b.dataset.ls === 'editar') return abrirLs(linha);
@@ -4016,6 +4088,120 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     renderListas();
     showToast('Item excluído', '"' + chave + '" removido de ' + d.nome + '.');
   });
+
+  // ===== Cadastros › Rateios pré-definidos (1 modelo = várias linhas da tbListaModeloRateio) =====
+  const pctBR = p => (Math.round(p * 10000) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  function renderModelos(d) {
+    fEl('lsHead').replaceChildren(lsEl('th', { text: 'Modelo' }), lsEl('th', { text: 'Centros de custo' }), lsEl('th', { text: 'Total' }), lsEl('th', { class: 'g-acoes-h', text: 'Ações' }));
+    const q = norm(fEl('lsBusca').value.trim()), ms = modelosRateio();
+    const lista = [...ms.entries()].filter(([n, it]) => !q || norm(n).includes(q) || it.some(x => norm(x.cc + ' ' + x.desc).includes(q)));
+    fEl('lsBody').replaceChildren(...lista.map(([n, it]) => {
+      const tot = it.reduce((s, x) => s + x.pct, 0);
+      return lsEl('tr', { class: 'g-row', 'data-chave': n },
+        lsEl('td', { 'data-label': 'Modelo' }, lsEl('strong', { text: n })),
+        lsEl('td', { 'data-label': 'Centros de custo' }, lsEl('div', { class: 'mr-cc' }, it.map(x => lsEl('span', {}, rotuloCentro(x.cc, x.desc) + ' — ', lsEl('b', { text: pctBR(x.pct) }))))),
+        lsEl('td', { 'data-label': 'Total' }, lsEl('span', { class: 'mr-total ' + (Math.abs(tot - 1) < 1e-6 ? 'ok' : 'erro'), text: pctBR(tot) })),
+        lsEl('td', { class: 'g-acoes-c' }, lsEl('div', { class: 'g-acoes' },
+          lsEl('button', { type: 'button', class: 'ibtn edit', 'data-ls': 'editar', title: 'Editar', 'aria-label': 'Editar ' + n, html: ICON_LS.edit }),
+          lsEl('button', { type: 'button', class: 'ibtn del', 'data-ls': 'excluir', title: 'Excluir', 'aria-label': 'Excluir ' + n, html: ICON_LS.del }))));
+    }));
+    fEl('lsVazio').hidden = lista.length > 0;
+    fEl('lsVazioMsg').textContent = window.LISTAS_PLANILHA && window.LISTAS_PLANILHA[d.tb] ? 'Nenhum rateio pré-definido cadastrado (ou a busca não encontrou nada).' : 'As listas não foram carregadas da planilha. Clique em Recarregar.';
+    fEl('lsInfo').textContent = lista.length === ms.size ? plural(ms.size, 'modelo', 'modelos') : lista.length + ' de ' + plural(ms.size, 'modelo', 'modelos');
+  }
+  function mrLinha(cc, pct) {
+    const row = lsEl('div', { class: 'mr-row' });
+    const sel = lsEl('select', { class: 'mr-cc-sel', 'aria-label': 'Centro de custo', 'data-vazio': '' }, lsEl('option', { value: '', text: 'Selecione o centro de custo...' }));
+    opcoesLista('tbListaCentroCusto[Código]', 'tbListaCentroCusto[Rótulo]').forEach(o => sel.append(new Option(o.rotulo, o.valor)));
+    if (cc && ![...sel.options].some(o => o.value === cc)) sel.append(new Option(rotuloCentro(cc), cc));
+    sel.value = cc || '';
+    const inp = lsEl('input', { type: 'text', class: 'mr-pct', inputmode: 'decimal', placeholder: '0,00', autocomplete: 'off', 'aria-label': 'Percentual', value: pct == null ? '' : pctFmt(pct) });
+    const rm = lsEl('button', { type: 'button', class: 'cc-remove', 'data-mr': 'rm', title: 'Remover', 'aria-label': 'Remover centro de custo', html: ICON_TRASH });
+    rm.style.display = 'grid';
+    row.append(lsEl('div', {}, sel), lsEl('div', { class: 'input-wrap has-suffix' }, inp, lsEl('span', { class: 'suffix', text: '%' })), rm);
+    fEl('mrRows').append(row);
+    enhanceSelect(sel);
+    return row;
+  }
+  function mrTotal() {
+    const t = Math.round([...document.querySelectorAll('#mrRows .mr-pct')].reduce((s, i) => s + pctParse(i.value), 0) * 100) / 100;
+    const el = fEl('mrTotal'); if (el) { el.textContent = 'Total: ' + pctFmt(t) + '%'; el.className = 'mr-total ' + (t === 100 ? 'ok' : 'erro'); }
+    return t;
+  }
+  function abrirModelo(nome) {
+    const d = lsDef(LS.atual), itens = nome ? (modelosRateio().get(nome) || []) : [];
+    LS.edit = nome || null;
+    fEl('lsDlgTitle').textContent = nome ? 'Editar rateio pré-definido' : 'Novo rateio pré-definido';
+    fEl('lsDlgSub').textContent = d.nome + (nome ? ' · ' + nome : '');
+    fEl('lsCampos').replaceChildren(
+      lsEl('div', { class: 'field col-12' }, lsEl('label', { for: 'lsF0' }, 'Nome do rateio ', lsEl('span', { class: 'req', text: '*' })),
+        lsEl('div', { class: 'input-wrap' }, lsEl('input', { type: 'text', id: 'lsF0', value: nome || '', autocomplete: 'off', maxlength: '120', placeholder: 'Ex.: COMBUSTIVEL E LUBRIFICANTES' }))),
+      lsEl('div', { class: 'mr-rows', id: 'mrRows' }),
+      lsEl('div', { class: 'mr-tools' },
+        lsEl('button', { type: 'button', class: 'btn-sm btn-add', 'data-mr': 'add', text: '+ Adicionar centro de custo' }),
+        lsEl('span', { class: 'mr-total', id: 'mrTotal' })),
+      lsEl('p', { class: 'ls-hint', text: 'A soma deve ser 100%. Alterar este modelo não muda as solicitações já gravadas.' }));
+    (itens.length ? itens : [{ cc: '', pct: null }, { cc: '', pct: null }]).forEach(x => mrLinha(x.cc, x.pct == null ? null : Math.round(x.pct * 10000) / 100));
+    mrTotal();
+    lsDlg.showModal();
+    setTimeout(() => fEl('lsF0').focus(), 30);
+  }
+  fEl('lsCampos').addEventListener('click', e => {
+    const b = e.target.closest('[data-mr]'); if (!b) return;
+    if (b.dataset.mr === 'add') { const r = mrLinha('', null); entrar(r); mrTotal(); }
+    else if (b.dataset.mr === 'rm') { if (document.querySelectorAll('#mrRows .mr-row').length <= 1) return; b.closest('.mr-row').remove(); mrTotal(); }
+  });
+  fEl('lsCampos').addEventListener('input', e => { if (e.target.classList.contains('mr-pct')) mrTotal(); });
+  fEl('lsCampos').addEventListener('focusout', e => { const t = e.target; if (t.classList && t.classList.contains('mr-pct') && t.value !== '') { t.value = pctFmt(pctParse(t.value)); mrTotal(); } });
+  const centroDesc = cc => { const l = (((window.LISTAS_PLANILHA || {}).tbListaCentroCusto || {}).linhas || []).find(x => String(x['Código']).trim() === String(cc)); return l ? String(l['Descrição'] || '').trim() : ''; };
+  async function salvarModelo(d) {
+    lsDlg.querySelectorAll('.invalid').forEach(x => x.classList.remove('invalid'));
+    const nomeEl = fEl('lsF0'), nome = nomeEl.value.trim().toUpperCase(), antigo = LS.edit;
+    const linhas = [...document.querySelectorAll('#mrRows .mr-row')];
+    let erro = ''; const vistos = new Set(), itens = [];
+    if (!nome) { nomeEl.classList.add('invalid'); erro = 'Informe o nome do rateio.'; }
+    else if (nome !== antigo && [...modelosRateio().keys()].some(n => norm(n) === norm(nome))) { nomeEl.classList.add('invalid'); erro = 'Já existe um rateio com o nome "' + nome + '".'; }
+    linhas.forEach(r => {
+      const sel = r.querySelector('select'), inp = r.querySelector('.mr-pct'), trg = r.querySelector('.cs-trigger') || sel, cc = sel.value, p = pctParse(inp.value);
+      if (!cc) { trg.classList.add('invalid'); erro = erro || 'Selecione o centro de custo em todas as linhas.'; }
+      else if (vistos.has(cc)) { trg.classList.add('invalid'); erro = erro || 'O centro de custo ' + cc + ' está repetido.'; }
+      vistos.add(cc);
+      if (p <= 0) { inp.classList.add('invalid'); erro = erro || 'Informe o percentual de todas as linhas.'; }
+      itens.push({ Modelo: nome, CentroCusto: cc, Descricao: centroDesc(cc), Percentual: (Math.round(p * 100) / 10000).toFixed(4).replace(/0+$/, '').replace(/\.$/, '') });
+    });
+    const tot = mrTotal();
+    if (!erro && tot !== 100) erro = 'A soma dos percentuais deve ser 100% (atual: ' + pctFmt(tot) + '%).';
+    if (erro) { tremer([...lsDlg.querySelectorAll('.invalid')].map(x => x.closest('.input-wrap') || x)); return showToast('Verifique os campos', erro, 'error'); }
+    const qtdAntiga = antigo ? (modelosRateio().get(antigo) || []).length : 0;
+    try {
+      await comLoader('Salvando rateio…', async () => {
+        // Grava as linhas novas primeiro e depois remove as antigas (a exclusão pega sempre a 1ª linha com o nome antigo)
+        for (const it of itens) await gravarLista('criar', d, null, it);
+        for (let i = 0; i < qtdAntiga; i++) await gravarLista('excluir', d, antigo, null);
+      });
+    } catch (err) { return showToast('Falha ao gravar', 'A planilha não respondeu (' + err.message + '). Clique em Recarregar para conferir.', 'error'); }
+    const t = (window.LISTAS_PLANILHA[d.tb] = window.LISTAS_PLANILHA[d.tb] || { colunas: ['Modelo', 'CentroCusto', 'Descricao', 'Percentual'], linhas: [] });
+    if (antigo) { let n = qtdAntiga; t.linhas = t.linhas.filter(l => !(String(l.Modelo).trim() === antigo && n-- > 0)); }
+    t.linhas.push(...itens);
+    preencherModelosRateio();
+    fecharLs(); renderListas();
+    showToast(antigo ? 'Rateio atualizado' : 'Rateio cadastrado', nome + ' · ' + plural(itens.length, 'centro de custo', 'centros de custo') + '.');
+  }
+  async function excluirModelo(d, nome) {
+    const itens = modelosRateio().get(nome) || []; if (!itens.length) return;
+    const ok = await confirmDuplo({
+      titulo: 'Excluir rateio pré-definido?',
+      mensagem: '"' + nome + '" (' + itens.length + ' centros) deixará de aparecer no formulário.',
+      mensagem2: 'As solicitações já gravadas com esse rateio não mudam. Esta ação não poderá ser desfeita.',
+      confirmar: 'Sim, excluir'
+    });
+    if (!ok) return;
+    try { await comLoader('Excluindo rateio…', async () => { for (let i = 0; i < itens.length; i++) await gravarLista('excluir', d, nome, null); }); }
+    catch (err) { return showToast('Falha ao excluir', 'A planilha não respondeu (' + err.message + '). Clique em Recarregar para conferir.', 'error'); }
+    const t = window.LISTAS_PLANILHA[d.tb]; t.linhas = t.linhas.filter(l => String(l.Modelo).trim() !== nome);
+    preencherModelosRateio(); renderListas();
+    showToast('Rateio excluído', '"' + nome + '" removido.');
+  }
 
   // ===================== Notas Fiscais e Fretes (abas Notas / Fretes) =====================
   let DOCS = null;
