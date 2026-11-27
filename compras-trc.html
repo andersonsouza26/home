@@ -2327,7 +2327,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   let dlgSeq = 0;
   const cf = id => document.getElementById(id);
 
-  function confirmDuplo({ titulo, mensagem, mensagem2, confirmar = 'Confirmar', tom = 'danger' }) {
+  function confirmDuplo({ titulo, mensagem, mensagem2, confirmar = 'Confirmar', tom = 'danger', simples = false, cancelar = 'Cancelar' }) {
     return new Promise(resolve => {
       const seq = ++dlgSeq;
       let etapa = 1;
@@ -2335,6 +2335,13 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       function render() {
         dlg.dataset.step = etapa;
         dlg.dataset.tom = tom;
+        dlg.querySelector('.cf-step').style.display = simples ? 'none' : '';
+        cancelBtn.textContent = cancelar;
+        if (simples) {
+          cf('cfTitle').textContent = titulo; cf('cfMsg').textContent = mensagem; cf('cfIcon').innerHTML = ICON_OK_BIG;
+          okBtn.textContent = confirmar; okBtn.className = 'btn btn-primary';
+          return;
+        }
         cf('cfStep').textContent = 'Etapa ' + etapa + ' de 2';
         dlg.querySelectorAll('.cf-dots i').forEach((d, i) => d.classList.toggle('on', i < etapa));
         cf('cfTitle').textContent = etapa === 1 ? titulo : 'Tem certeza?';
@@ -2349,6 +2356,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         }
       }
       function finish(v) {
+        cancelBtn.textContent = 'Cancelar'; dlg.querySelector('.cf-step').style.display = '';
         okBtn.removeEventListener('click', onOk);
         cancelBtn.removeEventListener('click', onCancel);
         dlg.removeEventListener('cancel', onEsc);
@@ -2361,7 +2369,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
             dlg.style.removeProperty('opacity'); dlg.style.removeProperty('transform');
           });
       }
-      const onOk = () => { if (etapa === 1) { etapa = 2; render(); cancelBtn.focus(); } else finish(true); };
+      const onOk = () => { if (simples) return finish(true); if (etapa === 1) { etapa = 2; render(); cancelBtn.focus(); } else finish(true); };
       const onCancel = () => finish(false);
       const onEsc = e => { e.preventDefault(); finish(false); };
       const onBackdrop = e => { if (e.target === dlg) finish(false); };
@@ -4504,7 +4512,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   }
   function datalist(id, vals) { return h('datalist', { id }, [...new Set(vals.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(v => h('option', { value: v }))); }
   function listaPlanilha(tb, col) { const t = (window.LISTAS_PLANILHA || {})[tb]; return t ? t.linhas.map(l => l[col] || Object.values(l).find(v => typeof v === 'string')) : []; }
-  function montarForm(titulo, sub, corpo, detalhes, onSalvar, rotSalvar) {
+  function montarForm(titulo, sub, corpo, detalhes, onSalvar, rotSalvar, aposFechar) {
     const det = h('details', { class: 'fm-det' }, h('summary', { text: 'Mais detalhes (opcional)' }), h('div', { class: 'qe-body' }, detalhes));
     fmDlg.replaceChildren(h('form', { method: 'dialog', novalidate: true },
       h('header', { class: 'qe-head' }, h('div', {}, h('h3', { id: 'fmTitle', text: titulo }), h('p', { text: sub })), h('button', { type: 'button', class: 'sb-icon-btn', 'aria-label': 'Fechar', onclick: () => fmDlg.close(), html: ICON_X })),
@@ -4514,9 +4522,12 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         h('button', { type: 'button', class: 'btn btn-primary', id: 'fmSalvar', onclick: async () => {
           const bt = fEl('fmSalvar'); fEl('fmErro').hidden = true;
           bt.disabled = true; bt.classList.add('btn-carregando');
-          try { const msg = await comLoader('Salvando na planilha…', onSalvar); if (msg) { fEl('fmErro').textContent = msg; fEl('fmErro').hidden = false; } else fmDlg.close(); }
+          let fechou = false;
+          try { const msg = await comLoader('Salvando na planilha…', onSalvar); if (msg) { fEl('fmErro').textContent = msg; fEl('fmErro').hidden = false; } else { fmDlg.close(); fechou = true; } }
           catch (e) { showToast('Falha ao salvar', 'A planilha não respondeu (' + e.message + ').', 'error'); }
           finally { bt.disabled = false; bt.classList.remove('btn-carregando'); }
+          // Só depois de gravado (resposta do Power Automate) e do formulário fechado
+          if (fechou && aposFechar) await aposFechar();
         } }, h('span', { text: rotSalvar || 'Salvar' })))));
     estilizar(fmDlg);
     fmDlg.showModal();
@@ -4535,9 +4546,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       campo('Valor total da NF', campoMoedaEl('fmValor', n && n.valor), 1, 3),
       campo('Fornecedor', inp('fmForn', n && n.fornecedor, { list: 'fmFornL' }), 1, 12), datalist('fmFornL', forn),
       (!edit || it0) ? campo('Descrição', inp('fmDesc', it0 && it0.desc), 1, 12) : h('p', { class: 'fm-nota', style: 'grid-column: span 12', text: 'Nota com ' + n.itens.length + ' itens: a descrição de cada item não é editada aqui.' }),
-      edit ? null : campo('Solicitação (opcional)', selSC(''), 0, 12),
-      edit ? null : h('label', { class: 'vc-chk', style: 'grid-column: span 12' }, h('input', { type: 'checkbox', id: 'fmLancar', checked: true }), ' Lançar os dados da NF na solicitação escolhida')
     ];
+    let novaNotaK = null; // preenchido só depois que a planilha confirmar a gravação
     const detalhes = [
       campo('Série', inp('fmSerie', n && n.serie), 0, 3),
       campo('Modelo', h('select', { id: 'fmModelo' }, ['NF-e', 'NFS-e', 'NFC-e', 'Outro'].map(m => h('option', { value: m, text: m, selected: n ? n.modelo === m : m === 'NF-e' }))), 0, 3),
@@ -4571,7 +4581,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
         }
         await recarregarDocs(); showToast('Nota atualizada', 'NF ' + num + ' salva na planilha.'); return;
       }
-      const sc = fEl('fmSC').value;
+      const sc = ''; // vínculo com a solicitação é feito depois, pelo botão 🔗
       // Confere na planilha (dados frescos) se a NF já foi gravada, p.ex. numa tentativa anterior que demorou
       const fresco = await chamarFluxo('listas', 'GET');
       const jaExiste = ((fresco && fresco.tbNotas) || []).find(r => String(r.NumeroNF).replace(/^0+/, '') === num && norm(r.Fornecedor).slice(0, 8) === norm(forn).slice(0, 8));
@@ -4581,17 +4591,27 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       await chamarFluxo('listasCrud', 'POST', { acao: 'criar', tabela: 'tbNotas', item });
       window.DOCS_PLANILHA.notas.push(item);
       await recarregarDocs();
-      let lanc = false;
-      if (sc && fEl('fmLancar').checked) { const nn = DOCS.notas.find(x => x.itens.some(i => i.id === item.ID)); if (nn) lanc = await lancarNaSC(nn, sc, valor, true); }
-      showToast('Nota cadastrada', 'NF ' + num + (sc ? ' vinculada à SC ' + sc + (lanc ? ' e lançada na solicitação' : '') : ' sem solicitação (vincule pelo botão 🔗)'));
-    }, edit ? 'Salvar alterações' : 'Cadastrar nota');
+      const nn = DOCS.notas.find(x => x.itens.some(i => i.id === item.ID));
+      novaNotaK = nn ? nn.k : null;
+      showToast('Nota cadastrada', 'NF ' + num + ' gravada na planilha (vincule à solicitação pelo botão 🔗).');
+    }, edit ? 'Salvar alterações' : 'Cadastrar nota', edit ? null : async () => {
+      // Passo 2: nota já gravada e confirmada → pergunta se quer cadastrar a DACTE
+      if (!novaNotaK) return;
+      const k = novaNotaK; novaNotaK = null;
+      const sim = await confirmDuplo({ simples: true, titulo: 'Cadastrar a DACTE?', mensagem: 'A nota fiscal foi cadastrada. Deseja cadastrar agora o frete (DACTE) desta nota?', confirmar: 'Sim', cancelar: 'Não' });
+      if (!sim) return;
+      // Passo 3: vai para Fretes e abre o cadastro com a NF já escolhida
+      location.hash = '#fretes';
+      await new Promise(r => setTimeout(r, 450));
+      formFrete(null, k);
+    });
   }
 
-  function formFrete(f) {
+  function formFrete(f, notaK) {
     const edit = !!f;
     const notas = (DOCS ? DOCS.notas : []).slice().sort((a, b) => (b.emissao || '').localeCompare(a.emissao || ''));
     const transp = listaPlanilha('tbListaTransportador', 'Transportador').concat((DOCS ? DOCS.fretes : []).map(x => x.transp));
-    const atualNota = f && f.nota ? f.nota.k : '';
+    const atualNota = f && f.nota ? f.nota.k : (notaK || '');
     const corpo = [
       campo('Nota fiscal transportada', h('select', { id: 'ffNota' }, h('option', { value: '', text: '— escolha a NF —' }), notas.map(n => h('option', { value: n.k, selected: n.k === atualNota, text: n.numero + ' · ' + n.fornecedor.slice(0, 40) + ' · ' + isoBR(n.emissao) + (n.scs.length ? ' · SC ' + n.scs.join(', ') : '') }))), 1, 12),
       campo('Transportadora', inp('ffTransp', f && f.transp, { list: 'ffTranspL' }), 1, 12), datalist('ffTranspL', transp),
