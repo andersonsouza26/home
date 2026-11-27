@@ -222,6 +222,7 @@
 // url: tela a abrir • webhook: URL do gatilho HTTP do Power Automate (opcional)
 let APPS = [
   { nome:"Gestão de Compras", desc:"Solicitações de compra, dashboard e cadastros.", cat:"Operações", cor:"#f97316", icon:"cart", url:"compras-trc.html", webhook:"", status:"on"  },
+  { nome:"Calculadora de Rateio", desc:"Soma as notas por centro de custo e monta o rateio em 100% para o Fluig.", cat:"Operações", cor:"#0ea5a4", icon:"percent", url:"rateio-trc.html", webhook:"", status:"on"  },
   { nome:"Relatórios",       desc:"Geração automática de relatórios em PDF/Excel.", cat:"Dados",         cor:"#2f6fed", icon:"chart",    url:"relatorios.html",  webhook:"", status:"on"  },
   { nome:"Envio de E-mails", desc:"Disparo programado de e-mails e alertas.",       cat:"Comunicação",   cor:"#e9445a", icon:"mail",     url:"emails.html",      webhook:"", status:"on"  },
   { nome:"Planilhas",        desc:"Consolidação e limpeza de planilhas.",           cat:"Dados",         cor:"#16a34a", icon:"table",    url:"planilhas.html",   webhook:"", status:"on"  },
@@ -248,6 +249,7 @@ const ICONS = {
   gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
   cart:'<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.5L22 7H6"/>',
   bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+  percent:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
   users:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
 };
 const UI = {
