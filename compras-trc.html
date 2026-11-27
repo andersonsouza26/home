@@ -1248,6 +1248,7 @@
       <section class="filters dfilters" id="dFiltros" aria-label="Filtros do dashboard">
         <div class="f-field"><label for="dBaseData">Filtrar data por</label><select id="dBaseData">
           <option value="dataSolicitada" selected>Data da solicitação</option>
+          <option value="dataNecessidade">Data de necessidade</option>
           <option value="dataEmissao">Data de emissão da NF</option>
           <option value="dataEntrega">Data de entrega</option>
         </select></div>
@@ -1395,7 +1396,7 @@
               <tr>
                 <th class="g-exp-h"><span class="sr-only">Detalhes</span></th>
                 <th><button type="button" class="sort" data-sort="fluig">Fluig / Solic.</button></th>
-                <th><button type="button" class="sort" data-sort="dataSolicitada">Data</button></th>
+                <th><button type="button" class="sort" data-sort="dataSolicitada" title="Data da solicitação (abaixo: data de necessidade)">Data</button></th>
                 <th><button type="button" class="sort" data-sort="solicitante">Solicitante</button></th>
                 <th><button type="button" class="sort" data-sort="produtos" title="Produtos e Serviços">Produtos</button></th>
                 <th><button type="button" class="sort" data-sort="status">Status</button></th>
@@ -1607,9 +1608,16 @@
           <select id="solicitante" name="solicitante" data-grava="tbSolicitacoes[Solicitante]" data-lista="tbListaSolicitante[Solicitante]"><option value="" data-fixo>Selecione...</option></select>
         </div>
         <div class="field col-3">
-          <label for="dataSolicitada">Data Solicitada <span class="req">*</span></label>
+          <label for="dataSolicitada">Data da solicitação <span class="req">*</span></label>
           <div class="input-wrap date-wrap">
             <input type="text" id="dataSolicitada" name="dataSolicitada" data-grava="tbSolicitacoes[DataSolicitada]" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
+            <button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+          </div>
+        </div>
+        <div class="field col-3">
+          <label for="dataNecessidade">Data de necessidade</label>
+          <div class="input-wrap date-wrap">
+            <input type="text" id="dataNecessidade" name="dataNecessidade" data-grava="tbSolicitacoes[DataNecessidade]" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
             <button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
           </div>
         </div>
@@ -1826,6 +1834,20 @@
       <div class="field col-6">
         <label for="qeComprador">Comprador <span class="req">*</span></label>
         <select id="qeComprador" data-grava="tbSolicitacoes[Comprador]" data-lista="tbListaComprador[Comprador]"><option value="" data-fixo>Selecione...</option></select>
+      </div>
+      <div class="field col-6">
+        <label for="qeSolicitada">Data da solicitação</label>
+        <div class="input-wrap date-wrap">
+          <input type="text" id="qeSolicitada" data-grava="tbSolicitacoes[DataSolicitada]" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
+          <button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+        </div>
+      </div>
+      <div class="field col-6">
+        <label for="qeNecessidade">Data de necessidade</label>
+        <div class="input-wrap date-wrap">
+          <input type="text" id="qeNecessidade" data-grava="tbSolicitacoes[DataNecessidade]" class="date" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
+          <button type="button" class="date-btn" tabindex="-1" aria-label="Abrir calendário"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+        </div>
       </div>
       <div class="qe-sec">Fornecedor e Nota Fiscal</div>
       <div class="field col-12 qe-buscanf">
@@ -2768,7 +2790,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       nFluig:           { grava: 'Nº Fluig', tipo: 'texto', obs: 'Obrigatório Nº Fluig OU Nº Solicitação' },
       nSolicitacao:     { grava: 'Nº Solicitação', tipo: 'texto' },
       solicitante:      { grava: 'Solicitante', tipo: 'lista', lista: 'tbListaSolicitante[Solicitante]' },
-      dataSolicitada:   { grava: 'Data Solicitada', tipo: 'data' },
+      dataSolicitada:   { grava: 'Data Solicitada', tipo: 'data', obs: 'Data em que a solicitação foi feita (criação)' },
+      dataNecessidade:  { grava: 'DataNecessidade', tipo: 'data', obs: 'Data em que o material/serviço é necessário' },
       status:           { grava: 'Status', tipo: 'lista-fixa', lista: 'tbListaStatus[Status]' },
       comprador:        { grava: 'Comprador', tipo: 'lista', lista: 'tbListaComprador[Comprador]' },
       classificacao:    { grava: 'Classificação', tipo: 'lista', lista: 'tbListaClassificacao[Classificação]' },
@@ -2901,7 +2924,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
   // Campos comuns a todas as linhas do rateio (colunas da tbSolicitacoes, sem as de fórmula)
   function camposComuns(s) {
     return {
-      NFluig: s.fluig || '', NSolicitacao: s.solicitacao || '', Solicitante: s.solicitante || '', DataSolicitada: s.dataSolicitada || '',
+      NFluig: s.fluig || '', NSolicitacao: s.solicitacao || '', Solicitante: s.solicitante || '', DataSolicitada: s.dataSolicitada || '', DataNecessidade: s.dataNecessidade || '',
       Status: s.status || '', Comprador: s.comprador || '', Classificacao: s.classificacao || '', ProdutosServicos: s.produtos || '',
       Rateio: s.rateio || '', NaturezaOperacao: s.natureza || '', Aplicacao: s.aplicacao || '', Fornecedor: s.fornecedor || '', NF: s.nf || '',
       ValorNF: txtNum(s.valorNF), DataEmissaoNF: s.dataEmissao || '', DataEntrega: s.dataEntrega || '',
@@ -3439,7 +3462,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       const chave = (l.NFluig || '') + '|' + (l.NSolicitacao || '') + (l.NFluig || l.NSolicitacao ? '' : '|' + l.ID);
       let s = mapa.get(chave);
       if (!s) {
-        s = { id: ++seq, fluig: String(l.NFluig || ''), solicitacao: String(l.NSolicitacao || ''), solicitante: l.Solicitante || '', dataSolicitada: dataISO(l.DataSolicitada),
+        s = { id: ++seq, fluig: String(l.NFluig || ''), solicitacao: String(l.NSolicitacao || ''), solicitante: l.Solicitante || '', dataSolicitada: dataISO(l.DataSolicitada), dataNecessidade: dataISO(l.DataNecessidade),
           status: l.Status || '', comprador: l.Comprador || '', classificacao: l.Classificacao || '', produtos: l.ProdutosServicos || '', rateio: l.Rateio || '',
           centros: [], natureza: l.NaturezaOperacao || '', aplicacao: l.Aplicacao || '', fornecedor: l.Fornecedor || '', nf: String(l.NF || ''),
           valorNF: numOuNull(l.ValorNF), dataEmissao: dataISO(l.DataEmissaoNF), dataEntrega: dataISO(l.DataEntrega), transportador: l.Transportador || '',
@@ -3528,7 +3551,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       h('td', { class: 'g-id', 'data-label': 'Nº Fluig / Solicitação' },
         h('div', {}, s.fluig ? 'Fluig ' + s.fluig : h('span', { class: 'muted', text: 'Fluig —' })),
         h('div', { class: 'g-sub', text: 'Solic. ' + (s.solicitacao || '—') }), (() => { const ns = docsDaSC(s); return ns && ns.length ? h('span', { class: 'dk-nfbadge', title: ns.map(n => 'NF ' + n.numero).join(', '), text: '● ' + plural(ns.length, 'NF', 'NFs') }) : null; })()),
-      h('td', { 'data-label': 'Data', text: isoBR(s.dataSolicitada) }),
+      h('td', { 'data-label': 'Data da solicitação', title: 'Solicitada em ' + isoBR(s.dataSolicitada) + (s.dataNecessidade ? ' · necessária até ' + isoBR(s.dataNecessidade) : '') }, h('div', { text: isoBR(s.dataSolicitada) }), s.dataNecessidade ? h('div', { class: 'g-sub', text: 'Nec. ' + isoBR(s.dataNecessidade) }) : null),
       h('td', { class: 'g-wrap', 'data-label': 'Solicitante', text: s.solicitante }),
       h('td', { class: 'g-prod', 'data-label': 'Produtos e Serviços', title: s.produtos }, h('span', { class: 'clamp2', text: s.produtos })),
       h('td', { 'data-label': 'Status' }, h('span', { class: 'chip-st' }, h('i', { style: 'background:' + COR_STATUS[s.status] }), s.status)),
@@ -3554,7 +3577,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const vt = valorTotalSol(s) || 0;
     const dl = pares => h('dl', {}, pares.map(([k, v]) => [h('dt', { text: k }), h('dd', { text: v || '—' })]));
     return h('tr', { class: 'g-detail', 'data-detalhe': s.id }, h('td', { colspan: 10 }, h('div', { class: 'gd' },
-      h('div', {}, h('h4', { text: 'Dados da solicitação' }), dl([['Nº Fluig', s.fluig], ['Nº Solicitação', s.solicitacao], ['Solicitante', s.solicitante], ['Comprador', s.comprador], ['Data', isoBR(s.dataSolicitada)], ['Classificação', s.classificacao]])),
+      h('div', {}, h('h4', { text: 'Dados da solicitação' }), dl([['Nº Fluig', s.fluig], ['Nº Solicitação', s.solicitacao], ['Solicitante', s.solicitante], ['Comprador', s.comprador], ['Solicitada em', isoBR(s.dataSolicitada)], ['Necessidade', isoBR(s.dataNecessidade)], ['Classificação', s.classificacao]])),
       h('div', {}, h('h4', { text: 'Detalhes da compra' }), dl([['Produtos', s.produtos], ['Natureza', s.natureza], ['Aplicação', s.aplicacao], ['Rateio', s.rateio]])),
       h('div', {}, h('h4', { text: 'Fornecedor e NF' }), dl([['Fornecedor', s.fornecedor], ['NF', s.nf], ['Valor da NF', s.valorNF != null ? fBRL(s.valorNF) : ''], ['Emissão', isoBR(s.dataEmissao)], ['Entrega', isoBR(s.dataEntrega)]])),
       h('div', {}, h('h4', { text: 'Transporte' }), dl([['Transportador', s.transportador], ['Frete', s.valorFrete != null ? fBRL(s.valorFrete) : ''], ['Valor total', valorTotalSol(s) != null ? fBRL(vt) : '']])),
@@ -3745,7 +3768,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     fEl('qeSub').textContent = idSol(s) || 'Solicitação sem número';
     fEl('qeResumo').replaceChildren(
       h('span', {}, 'Solicitante: ', h('b', { text: s.solicitante })),
-      h('span', {}, 'Data: ', h('b', { text: isoBR(s.dataSolicitada) })),
+      h('span', {}, 'Solicitada: ', h('b', { text: isoBR(s.dataSolicitada) })),
+      s.dataNecessidade ? h('span', {}, 'Necessidade: ', h('b', { text: isoBR(s.dataNecessidade) })) : null,
       h('span', {}, 'Produtos: ', h('b', { text: s.produtos })),
       h('span', {}, 'Centro de custo: ', h('b', { text: s.centros.length > 1 ? 'Rateio em ' + s.centros.length + ' centros' : (s.centros[0] || {}).cc })));
     fEl('qeStatus').value = s.status; fEl('qeStatus').dispatchEvent(new Event('change'));
@@ -3755,6 +3779,8 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     fEl('qeValorNf').value = numParaMoeda(s.valorNF);
     fEl('qeEmissao').value = isoBR(s.dataEmissao);
     fEl('qeEntrega').value = isoBR(s.dataEntrega);
+    fEl('qeSolicitada').value = isoBR(s.dataSolicitada);
+    fEl('qeNecessidade').value = isoBR(s.dataNecessidade);
     fEl('qeTransp').value = s.transportador || '';
     fEl('qeFrete').value = numParaMoeda(s.valorFrete);
     fEl('qeObs').value = s.observacao || '';
@@ -3783,7 +3809,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     qe.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
     if (!fEl('qeStatus').value) { fEl('qeStatusBtn').classList.add('invalid'); erro = 'Selecione o status.'; }
     if (!fEl('qeComprador').value.trim()) { fEl('qeComprador').classList.add('invalid'); erro = erro || 'Informe o comprador.'; }
-    ['qeEmissao', 'qeEntrega'].forEach(id => { const v = fEl(id).value; if (v && !parseDate(v)) { fEl(id).classList.add('invalid'); erro = erro || 'Corrija a data destacada (dd/mm/aaaa).'; } });
+    ['qeEmissao', 'qeEntrega', 'qeSolicitada', 'qeNecessidade'].forEach(id => { const v = fEl(id).value; if (v && !parseDate(v)) { fEl(id).classList.add('invalid'); erro = erro || 'Corrija a data destacada (dd/mm/aaaa).'; } });
     if (erro) {
       tremer([...qe.querySelectorAll('.invalid')].map(el => el.closest('.input-wrap') || el.closest('.cs') || el));
       return showToast('Verifique os campos', erro, 'error');
@@ -3800,6 +3826,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       status: fEl('qeStatus').value, comprador: fEl('qeComprador').value.trim(),
       fornecedor: fEl('qeFornecedor').value.trim(), nf: fEl('qeNf').value.trim(),
       valorNF: moedaParaNum(fEl('qeValorNf').value), dataEmissao: brISO(fEl('qeEmissao').value), dataEntrega: brISO(fEl('qeEntrega').value),
+      dataSolicitada: brISO(fEl('qeSolicitada').value) || s.dataSolicitada, dataNecessidade: brISO(fEl('qeNecessidade').value) || '',
       transportador: fEl('qeTransp').value.trim(), valorFrete: moedaParaNum(fEl('qeFrete').value), observacao: fEl('qeObs').value.trim()
     });
     try { await apiGravar('atualizar', novoS); }
@@ -3808,6 +3835,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
       status: fEl('qeStatus').value, comprador: fEl('qeComprador').value.trim(),
       fornecedor: fEl('qeFornecedor').value.trim(), nf: fEl('qeNf').value.trim(),
       valorNF: moedaParaNum(fEl('qeValorNf').value), dataEmissao: brISO(fEl('qeEmissao').value), dataEntrega: brISO(fEl('qeEntrega').value),
+      dataSolicitada: brISO(fEl('qeSolicitada').value) || s.dataSolicitada, dataNecessidade: brISO(fEl('qeNecessidade').value) || '',
       transportador: fEl('qeTransp').value.trim(), valorFrete: moedaParaNum(fEl('qeFrete').value), observacao: fEl('qeObs').value.trim()
     });
     fecharEdicao();
@@ -3825,7 +3853,7 @@ var Motion=(()=>{var ee=Object.defineProperty;var Ye=Object.getOwnPropertyDescri
     const centros = rows().map(r => ({ cc: r.querySelector('.cc-name').value.trim(), descricao: ((r.querySelector('.cc-name').selectedOptions[0] || {}).text || '').split(' · ').slice(1).join(' · '), pct: multi ? Math.round(pctParse(r.querySelector('.cc-pct').value) * 100) / 10000 : 1 }));
     const prox = Math.max(0, ...(SOL || []).map(s => s.id)) + 1;
     return {
-      id: prox, fluig: v('nFluig'), solicitacao: v('nSolicitacao'), solicitante: v('solicitante'), dataSolicitada: brISO(v('dataSolicitada')),
+      id: prox, fluig: v('nFluig'), solicitacao: v('nSolicitacao'), solicitante: v('solicitante'), dataSolicitada: brISO(v('dataSolicitada')), dataNecessidade: brISO(v('dataNecessidade')) || '',
       status: v('status'), comprador: v('comprador'), classificacao: v('classificacao'), produtos: v('produtosServicos'),
       rateio: multi ? 'Sim' : 'Não', centros, natureza: v('naturezaOperacao'), aplicacao: v('aplicacao'),
       fornecedor: v('fornecedor'), nf: v('nf'), valorNF: moedaParaNum(v('valorNf')), dataEmissao: brISO(v('dataEmissaoNf')),
