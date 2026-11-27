@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Rateio · Compras TRC</title>
+<script>
+  (function () { try { var t = localStorage.getItem("calcRateio.tema"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+</script>
+<style>
+  /* ===== Tema (mesmo padrão da página Compras TRC) ===== */
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --surface-2: #fafafa;
+    --border: #e4e4e7; --border-strong: #d4d4d8;
+    --text: #09090b; --text-muted: #71717a;
+    --primary: #18181b; --primary-hover: #27272a; --primary-fg: #fafafa; --primary-soft: rgba(24,24,27,.07);
+    --success: #16a34a; --success-soft: rgba(22,163,74,.12);
+    --neutral: #f4f4f5; --neutral-hover: #e4e4e7; --neutral-text: #18181b;
+    --danger: #dc2626; --danger-soft: rgba(220,38,38,.1);
+    --warning: #d97706; --warning-soft: rgba(217,119,6,.12);
+    --info: #2a78d6; --info-soft: rgba(42,120,214,.1);
+    --hover: #f4f4f5; --shadow: 0 1px 2px rgba(0,0,0,.05); --shadow-lg: 0 10px 30px rgba(0,0,0,.1);
+    --radius: 12px; --radius-sm: 8px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #09090b; --surface: #09090b; --surface-2: #18181b;
+      --border: #27272a; --border-strong: #3f3f46;
+      --text: #fafafa; --text-muted: #a1a1aa;
+      --primary: #fafafa; --primary-hover: #e4e4e7; --primary-fg: #18181b; --primary-soft: rgba(250,250,250,.08);
+      --success: #22c55e; --success-soft: rgba(34,197,94,.14);
+      --neutral: #27272a; --neutral-hover: #3f3f46; --neutral-text: #fafafa;
+      --danger: #ef4444; --danger-soft: rgba(239,68,68,.14);
+      --warning: #f59e0b; --warning-soft: rgba(245,158,11,.14);
+      --info: #3987e5; --info-soft: rgba(57,135,229,.15);
+      --hover: #18181b; --shadow: none; --shadow-lg: 0 10px 30px rgba(0,0,0,.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #09090b; --surface: #09090b; --surface-2: #18181b;
+    --border: #27272a; --border-strong: #3f3f46;
+    --text: #fafafa; --text-muted: #a1a1aa;
+    --primary: #fafafa; --primary-hover: #e4e4e7; --primary-fg: #18181b; --primary-soft: rgba(250,250,250,.08);
+    --success: #22c55e; --success-soft: rgba(34,197,94,.14);
+    --neutral: #27272a; --neutral-hover: #3f3f46; --neutral-text: #fafafa;
+    --danger: #ef4444; --danger-soft: rgba(239,68,68,.14);
+    --warning: #f59e0b; --warning-soft: rgba(245,158,11,.14);
+    --info: #3987e5; --info-soft: rgba(57,135,229,.15);
+    --hover: #18181b; --shadow: none; --shadow-lg: 0 10px 30px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, "Segoe UI", "Inter", -apple-system, Roboto, Arial, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  [hidden] { display: none !important; }
+  svg { flex: none; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  /* Cabeçalho */
+  .head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .head h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.02em; }
+  .head p { margin: 4px 0 0; color: var(--text-muted); }
+  .head-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .seg { display: inline-flex; background: var(--neutral); border-radius: var(--radius-sm); padding: 3px; }
+  .seg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: .8rem; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+
+  /* KPIs */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+  .kpi .l { color: var(--text-muted); font-size: .8rem; font-weight: 500; }
+  .kpi .v { font-size: 1.45rem; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .kpi.ok .v { color: var(--success); }
+  .kpi.bad .v { color: var(--danger); }
+
+  /* Cards */
+  .grade { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .card-head h2 { margin: 0; font-size: 1rem; }
+  .card-head .sub { color: var(--text-muted); font-size: .8rem; }
+  .card-head .sp { display: none; }
+  .card-head > div:not(.sp) { flex: 1 1 220px; }
+  .card-head .btn { margin-left: 0; }
+  .passo { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 99px; background: var(--primary); color: var(--primary-fg); font-size: .75rem; font-weight: 700; }
+
+  /* Botões */
+  .btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .85rem; font-weight: 600; border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; transition: background .15s, border-color .15s; }
+  .btn-primary { background: var(--primary); color: var(--primary-fg); }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-neutral { background: var(--neutral); color: var(--neutral-text); }
+  .btn-neutral:hover { background: var(--neutral-hover); }
+  .btn-outline { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  .btn-outline:hover { background: var(--hover); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-ghost-danger { background: transparent; color: var(--danger); border-color: var(--danger-soft); }
+  .btn-ghost-danger:hover { background: var(--danger-soft); }
+  .btn-sm { padding: 6px 10px; font-size: .8rem; }
+  .ibtn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; }
+  .ibtn:hover { background: var(--hover); color: var(--text); }
+  .ibtn.del:hover { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+
+  /* Tabelas */
+  .tab-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 600; padding: 10px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:hover { background: var(--hover); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .muted { color: var(--text-muted); }
+  .small { font-size: .8rem; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; }
+  tfoot td { white-space: nowrap; font-weight: 700; border-bottom: 0; background: var(--surface-2); }
+  .acoes { display: flex; gap: 6px; justify-content: flex-end; }
+  .vazio { text-align: center; color: var(--text-muted); padding: 34px 16px; }
+  .vazio b { display: block; color: var(--text); margin-bottom: 4px; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--neutral); color: var(--neutral-text); }
+  .tag.modelo { background: var(--info-soft); color: var(--info); }
+  .tag.pers { background: var(--warning-soft); color: var(--warning); }
+  .detalhe { margin-top: 4px; font-size: .76rem; color: var(--text-muted); line-height: 1.35; }
+
+  .pct { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .bar { width: 70px; height: 6px; border-radius: 99px; background: var(--neutral); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--primary); border-radius: 99px; }
+  .dif { font-size: .74rem; }
+  .dif.zero { color: var(--success); }
+  .dif.nz { color: var(--warning); }
+
+  .nota { margin: 0; padding: 12px 16px; color: var(--text-muted); font-size: .8rem; border-top: 1px solid var(--border); }
+  .alerta { margin: 12px 16px 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning); font-size: .82rem; }
+  .fonte { font-size: .76rem; color: var(--text-muted); }
+
+  /* Formulários */
+  label.lbl { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 6px; }
+  .req { color: var(--danger); }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; height: 40px; transition: border-color .15s, box-shadow .15s; }
+  textarea { height: auto; min-height: 60px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+  input.invalid, select.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px var(--danger-soft); }
+  .money { text-align: right; font-variant-numeric: tabular-nums; }
+  .iw { position: relative; }
+  .iw .pre, .iw .suf { position: absolute; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: .85rem; pointer-events: none; }
+  .iw .pre { left: 11px; } .iw .suf { right: 11px; }
+  .iw.has-pre input { padding-left: 36px; }
+  .iw.has-suf input { padding-right: 28px; text-align: right; }
+  .campos { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+  .c4 { grid-column: span 4; } .c6 { grid-column: span 6; } .c8 { grid-column: span 8; } .c12 { grid-column: span 12; }
+  .hint { display: block; margin-top: 5px; font-size: .76rem; color: var(--text-muted); }
+
+  .tipo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tipo label { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .tipo label b { font-size: .85rem; }
+  .tipo label span { font-size: .74rem; color: var(--text-muted); }
+  .tipo input { display: none; }
+  .tipo label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+
+  .pers-rows { display: flex; flex-direction: column; gap: 8px; }
+  .pers-row { display: grid; grid-template-columns: 1fr 120px 36px; gap: 8px; align-items: center; }
+  .pers-tools { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; flex-wrap: wrap; }
+  .tot { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tot.ok { color: var(--success); } .tot.bad { color: var(--danger); }
+  .previa { margin-top: 10px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-size: .8rem; }
+  .previa div { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+
+  /* Dialogs */
+  dialog { border: 1px solid var(--border); border-radius: var(--radius); padding: 0; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 40px); }
+  dialog.sm { width: min(420px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(9,9,11,.55); backdrop-filter: blur(3px); }
+  .dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 18px 20px 6px; }
+  .dlg-head h3 { margin: 0; font-size: 1.1rem; }
+  .dlg-head p { margin: 2px 0 0; color: var(--text-muted); font-size: .82rem; }
+  .dlg-body { padding: 12px 20px; overflow-y: auto; max-height: calc(100vh - 200px); }
+  .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 18px; border-top: 1px solid var(--border); }
+  .cf-icon { width: 48px; height: 48px; margin: 18px auto 6px; border-radius: 99px; display: grid; place-items: center; background: var(--danger-soft); color: var(--danger); }
+  .cf-txt { text-align: center; padding: 0 22px 8px; }
+  .cf-txt h3 { margin: 6px 0 6px; font-size: 1.05rem; }
+  .cf-txt p { margin: 0; color: var(--text-muted); }
+  .cf-step { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 600; }
+  dialog.sm .dlg-foot { justify-content: center; border-top: 0; }
+
+  .toast { position: fixed; right: 24px; bottom: 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); border-radius: var(--radius); padding: 12px 16px; font-size: .85rem; opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; z-index: 50; max-width: 360px; }
+  .toast.on { opacity: 1; transform: none; }
+  .toast b { display: block; }
+
+
+  /* ===== Lista com pesquisa (mesmo componente da página Compras TRC) ===== */
+  .cs { position: relative; width: 100%; }
+  .cs select { display: none; }
+  .cs-trigger { width: 100%; height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font: inherit; font-size: .9rem; text-align: left; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 12px; cursor: pointer; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .cs-trigger:hover { border-color: var(--text-muted); }
+  .cs-trigger:focus-visible, .cs.is-open .cs-trigger { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+  .cs-trigger.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px var(--danger-soft); }
+  .cs-trigger .chev { color: var(--text-muted); flex-shrink: 0; transition: transform .2s; }
+  .cs.is-open .cs-trigger .chev { transform: rotate(180deg); color: var(--primary); }
+  .cs-label { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cs-label.placeholder { color: var(--text-muted); }
+  .cs-menu { position: fixed; z-index: 1000; margin: 0; padding: 6px; list-style: none; max-height: 280px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; animation: csIn .16s ease-out; }
+  .cs-menu[hidden] { display: none; }
+  @keyframes csIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+  .cs-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: .88rem; cursor: pointer; user-select: none; }
+  .cs-option svg { opacity: 0; color: var(--primary); flex-shrink: 0; }
+  .cs-option.active { background: var(--hover); }
+  .cs-option.selected { font-weight: 600; }
+  .cs-option.selected svg { opacity: 1; }
+  .cs-option mark { background: var(--warning-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .cs-search { position: sticky; top: -6px; z-index: 1; background: var(--surface); margin: -6px -6px 6px; padding: 6px; border-bottom: 1px solid var(--border); }
+  .cs-search input { height: 36px; font-size: .88rem; }
+  .cs-empty { padding: 10px; font-size: .8rem; color: var(--text-muted); font-style: italic; }
+  .cs-count { padding: 4px 10px 2px; font-size: .7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* Busca nas notas */
+  .busca { position: relative; grid-column: 1 / -1; }
+  .busca svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .busca input { padding-left: 34px; height: 36px; }
+  .filtros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .filtros .cs { width: 100%; }
+  .filtros .cs-trigger { height: 36px; }
+  .sel-curto .cs { width: 190px; }
+
+  @media (max-width: 1000px) { .grade { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .tipo { grid-template-columns: 1fr; } .c4, .c6, .c8 { grid-column: span 12; } .wrap { padding: 18px 14px 40px; } }
+  /* ===== Relatório de impressão (A4) ===== */
+  #relatorio { display: none; }
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  @media print {
+    :root, :root[data-theme] { color-scheme: light; }
+    body { background: #fff !important; color: #111 !important; font-size: 10.5pt; }
+    .wrap, dialog, .toast, .cs-menu { display: none !important; }
+    #relatorio { display: block; color: #111; }
+    #relatorio * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .rl-topo { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
+    .rl-topo h1 { margin: 0; font-size: 18pt; letter-spacing: -.01em; }
+    .rl-topo .org { font-size: 9pt; color: #555; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+    .rl-topo .meta { text-align: right; font-size: 9pt; color: #555; line-height: 1.4; }
+    .rl-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .rl-kpis div { border: 1px solid #ccc; border-radius: 6px; padding: 7px 10px; }
+    .rl-kpis span { display: block; font-size: 8pt; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    .rl-kpis b { font-size: 13pt; font-variant-numeric: tabular-nums; }
+    #relatorio h2 { font-size: 11.5pt; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #ccc; break-after: avoid; }
+    #relatorio h2 small { font-weight: 400; color: #666; font-size: 8.5pt; margin-left: 6px; }
+    #relatorio table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    #relatorio th { background: #f0f0f0 !important; color: #333; font-size: 7.8pt; text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid #bbb; text-align: left; }
+    #relatorio td { padding: 5px 8px; border-bottom: 1px solid #e3e3e3; vertical-align: top; color: #111; }
+    #relatorio tr { break-inside: avoid; }
+    #relatorio thead { display: table-header-group; }
+    #relatorio tfoot td { font-weight: 700; border-top: 1.5px solid #111; border-bottom: 0; background: #f7f7f7 !important; }
+    #relatorio .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    #relatorio .cod { font-family: ui-monospace, Consolas, monospace; font-size: 9pt; }
+    #relatorio .pct-b { font-weight: 700; }
+    #relatorio .barra { display: inline-block; width: 46px; height: 5px; background: #e5e5e5 !important; border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+    #relatorio .barra i { display: block; height: 100%; background: #111 !important; }
+    #relatorio .sub { color: #555; font-size: 8.5pt; line-height: 1.35; margin-top: 2px; }
+    #relatorio .tag { display: inline-block; font-size: 7.8pt; font-weight: 600; padding: 1px 6px; border-radius: 99px; border: 1px solid #bbb; color: #333; background: #fff !important; }
+    #relatorio .dif { font-size: 8pt; color: #a15c00; }
+    .rl-nota { margin-top: 10px; font-size: 8.5pt; color: #555; border-left: 3px solid #ccc; padding: 4px 8px; }
+    .rl-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; break-inside: avoid; }
+    .rl-assin div { border-top: 1px solid #111; padding-top: 4px; font-size: 8.5pt; color: #444; text-align: center; }
+    .rl-rodape { margin-top: 16px; font-size: 8pt; color: #888; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div>
+      <h1>Calculadora de Rateio</h1>
+      <p>Lance cada nota com o centro de custo ou rateio dela. A calculadora soma por centro de custo e monta o rateio em 100% para o Fluig.</p>
+    </div>
+    <div class="head-acoes">
+      <span class="fonte" id="fonteDados">Carregando centros de custo…</span>
+      <div class="seg" role="group" aria-label="Tema">
+        <button data-tema="system">Sistema</button><button data-tema="light">Claro</button><button data-tema="dark">Escuro</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi"><div class="l">Valor total das notas</div><div class="v" id="kTotal">R$ 0,00</div></div>
+    <div class="kpi"><div class="l">Notas lançadas</div><div class="v" id="kNotas">0</div></div>
+    <div class="kpi"><div class="l">Centros de custo no rateio</div><div class="v" id="kCC">0</div></div>
+    <div class="kpi" id="kPctBox"><div class="l">Soma das porcentagens</div><div class="v" id="kPct">0,00%</div></div>
+  </section>
+
+  <div class="grade">
+    <!-- PASSO 1: notas -->
+    <section class="card">
+      <div class="card-head">
+        <span class="passo">1</span>
+        <div><h2>Notas</h2><div class="sub">Cada nota vai para um centro de custo ou um rateio</div></div>
+        <span class="sp"></span>
+        <button class="btn btn-ghost-danger btn-sm" id="btnLimpar">Limpar tudo</button>
+        <button class="btn btn-primary" id="btnNova">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar nota
+        </button>
+      </div>
+      <div class="filtros">
+        <label class="busca"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="qNotas" placeholder="Buscar nota, descrição ou centro de custo…" autocomplete="off"></label>
+        <select id="fDestino" data-vazio aria-label="Filtrar por destino"><option value="">Todos os destinos</option><option value="cc">Centro de custo único</option><option value="modelo">Rateio pré-definido</option><option value="pers">Rateio personalizado</option></select>
+        <select id="fCC" data-vazio aria-label="Filtrar por centro de custo"><option value="">Todos os centros de custo</option></select>
+      </div>
+      <div class="tab-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Nota</th><th>Destino</th><th class="num">Valor</th><th class="ac"></th></tr></thead>
+          <tbody id="tbNotas"></tbody>
+          <tfoot><tr><td></td><td>Total geral</td><td></td><td class="num" id="fNotas">R$ 0,00</td><td class="ac"></td></tr></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- PASSO 2: resultado -->
+    <section class="card">
+      <div class="card-head">
+        <span class="passo">2</span>
+        <div><h2>Rateio final</h2><div class="sub">Soma por centro de custo · use estes percentuais no Fluig</div></div>
+        <span class="sp"></span>
+        <button class="btn btn-outline btn-sm" id="btnCsv" title="Baixar CSV">CSV</button>
+        <button class="btn btn-outline btn-sm" id="btnImprimir">Imprimir</button>
+        <button class="btn btn-primary btn-sm" id="btnCopiar">Copiar rateio</button>
+      </div>
+      <div class="alerta" id="avisoDif" hidden></div>
+      <div class="tab-scroll">
+        <table>
+          <thead><tr><th>Centro de custo</th><th class="num">Valor somado</th><th class="num">%</th><th class="num" title="Valor total × % arredondado: é o que o sistema vai calcular ao lançar a NF">Conferência</th></tr></thead>
+          <tbody id="tbRes"></tbody>
+          <tfoot><tr><td>Total</td><td class="num" id="fResV">R$ 0,00</td><td class="num" id="fResP">0,00%</td><td class="num" id="fResC">R$ 0,00</td></tr></tfoot>
+        </table>
+      </div>
+      <p class="nota">Os percentuais têm 2 casas e sempre fecham 100,00% (a sobra do arredondamento vai para quem tem a maior fração). <b>Conferência</b> = valor total × % arredondado, que é o que a solicitação calcula ao receber a NF; a diferença mostra quanto o arredondamento do % muda cada centro.</p>
+    </section>
+  </div>
+</div>
+
+<!-- Dialog: nota -->
+<dialog id="dlgNota">
+  <form id="fNota" novalidate>
+    <div class="dlg-head">
+      <div><h3 id="dlgTitulo">Adicionar nota</h3><p>Campos com <span class="req">*</span> são obrigatórios</p></div>
+      <button type="button" class="ibtn" data-fechar aria-label="Fechar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <div class="campos">
+        <div class="c4"><label class="lbl" for="nNum">Nº da nota <span class="req">*</span></label><input id="nNum" autocomplete="off" inputmode="numeric" placeholder="Ex.: 1039"></div>
+        <div class="c8"><label class="lbl" for="nValor">Valor <span class="req">*</span></label><div class="iw has-pre"><span class="pre">R$</span><input id="nValor" class="money" inputmode="numeric" placeholder="0,00" autocomplete="off"></div></div>
+        <div class="c12"><label class="lbl" for="nDesc">Descrição / aplicação</label><input id="nDesc" autocomplete="off" placeholder="Ex.: Rebobinagem motor da destopadeira"></div>
+        <div class="c12">
+          <label class="lbl">Destino do valor <span class="req">*</span></label>
+          <div class="tipo">
+            <label><input type="radio" name="tipo" value="cc" checked><b>Centro de custo único</b><span>100% em um centro</span></label>
+            <label><input type="radio" name="tipo" value="modelo"><b>Rateio pré-definido</b><span>Usa um modelo cadastrado</span></label>
+            <label><input type="radio" name="tipo" value="pers"><b>Rateio personalizado</b><span>Você define os %</span></label>
+          </div>
+        </div>
+        <div class="c12" id="boxCC"><label class="lbl" for="nCC">Centro de custo <span class="req">*</span></label><select id="nCC"></select></div>
+        <div class="c12" id="boxModelo" hidden>
+          <label class="lbl" for="nModelo">Rateio pré-definido <span class="req">*</span></label><select id="nModelo"></select>
+          <span class="hint" id="modeloHint"></span>
+        </div>
+        <div class="c12" id="boxPers" hidden>
+          <label class="lbl">Divisão desta nota <span class="req">*</span></label>
+          <div class="pers-rows" id="persRows"></div>
+          <div class="pers-tools">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-neutral btn-sm" id="persAdd">+ Centro de custo</button>
+              <button type="button" class="btn btn-neutral btn-sm" id="persIgual">Dividir igualmente</button>
+            </div>
+            <span class="tot" id="persTot">Total: 0,00%</span>
+          </div>
+        </div>
+        <div class="c12"><div class="previa" id="previa" hidden></div></div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-neutral" data-fechar>Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="btnSalvarNota">Adicionar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dialog: confirmação em 2 etapas -->
+<dialog id="dlgCf" class="sm">
+  <div class="cf-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></div>
+  <div class="cf-txt"><div class="cf-step" id="cfStep">Etapa 1 de 2</div><h3 id="cfTit"></h3><p id="cfMsg"></p></div>
+  <div class="dlg-foot"><button type="button" class="btn btn-neutral" id="cfNao">Cancelar</button><button type="button" class="btn btn-danger" id="cfSim">Continuar</button></div>
+</dialog>
+
+<div id="relatorio" aria-hidden="true"></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  // ===== Fonte dos centros de custo e rateios pré-definidos: a mesma planilha da página Compras TRC =====
+  var URL_LISTAS = "https://defaultbef34cc325ad4433b5d5c8ebb053b2.4f.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/17/workflows/6651de4638c54f9d8451267afc00d9fa/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XtyiO44oFRQdHwM63Qiwg2B0PCHBv_uxiY4P80DCyN8";
+  // Reserva, caso a planilha não responda
+  var CC_PADRAO = [
+    ["1002011", "MOURÃO"], ["1003001", "LINHA 4"], ["1003002", "LINHA 3 - ESTUFAS"], ["1003003", "PATIO DE TORAS E SERRADOS"],
+    ["1003004", "AFIACAO"], ["1003006", "SUPORTE INDUSTRIAL"], ["1003007", "LINHA 1 - PRINCIPAL (BLOCOS)"], ["1003008", "LINHA 2"],
+    ["1003009", "LINHA 1 - SECUNDARIA (TABUAS)"], ["1003010", "PICADOR"], ["1003011", "DESCASCADOR"]
+  ].map(function (x) { return { cod: x[0], desc: x[1] }; });
+
+  var KEY = "calcRateio.v1";
+  var CC = CC_PADRAO.slice(), MODELOS = {};
+  var notas = carregar();
+
+  // ===== Utilidades =====
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, html) { var e = document.createElement(tag); for (var k in (attrs || {})) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var n2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function R(v) { return brl.format(v || 0); }
+  function P(v) { return n2.format(v || 0) + "%"; }
+  function centavos(v) { return Math.round((v || 0) * 100); }
+  function lerNum(s) { var t = String(s || "").replace(/[R$\s%]/g, ""); if (!t) return null; if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", "."); var n = parseFloat(t); return isNaN(n) ? null : n; }
+  function salvar() { try { localStorage.setItem(KEY, JSON.stringify(notas)); } catch (e) {} }
+  function carregar() { try { var x = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(x) ? x : []; } catch (e) { return []; } }
+  function descCC(cod) { for (var i = 0; i < CC.length; i++) if (CC[i].cod === String(cod)) return CC[i].desc; return "?"; }
+  function rotCC(cod) { return cod + " · " + descCC(cod); }
+  var tt;
+  function toast(t, m) { var e = $("toast"); e.innerHTML = "<b>" + esc(t) + "</b>" + (m ? esc(m) : ""); e.classList.add("on"); clearTimeout(tt); tt = setTimeout(function () { e.classList.remove("on"); }, 2600); }
+
+  // Divide "total" (em centavos) pelos pesos, com a sobra do arredondamento indo para as maiores frações → soma exata
+  function dividir(totalInt, pesos) {
+    var soma = pesos.reduce(function (a, b) { return a + b; }, 0);
+    if (!soma) return pesos.map(function () { return 0; });
+    var brutos = pesos.map(function (p) { return totalInt * p / soma; });
+    var base = brutos.map(Math.floor), resto = totalInt - base.reduce(function (a, b) { return a + b; }, 0);
+    brutos.map(function (b, i) { return { i: i, f: b - Math.floor(b) }; }).sort(function (a, b) { return b.f - a.f; })
+      .slice(0, resto).forEach(function (x) { base[x.i]++; });
+    return base;
+  }
+
+  // ===== Tema =====
+  function tema(op) {
+    if (op === "light" || op === "dark") document.documentElement.setAttribute("data-theme", op); else document.documentElement.removeAttribute("data-theme");
+    try { op === "system" ? localStorage.removeItem("calcRateio.tema") : localStorage.setItem("calcRateio.tema", op); } catch (e) {}
+    document.querySelectorAll("[data-tema]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.tema === op)); });
+  }
+  document.querySelectorAll("[data-tema]").forEach(function (b) { b.onclick = function () { tema(b.dataset.tema); }; });
+  tema(document.documentElement.getAttribute("data-theme") || "system");
+
+  // ===== Lista com pesquisa: o mesmo campo é lista, pesquisa e filtro =====
+  var ICON_CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  var ICON_CHECK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var aberto = null;
+  function semAcento(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+  function fecharLista() { if (!aberto) return; aberto.menu.hidden = true; aberto.wrap.classList.remove("is-open"); aberto.btn.setAttribute("aria-expanded", "false"); aberto = null; }
+  document.addEventListener("mousedown", function (e) { if (aberto && !aberto.wrap.contains(e.target) && !aberto.menu.contains(e.target)) fecharLista(); });
+  window.addEventListener("resize", fecharLista);
+  document.addEventListener("scroll", function (e) { if (aberto && !aberto.menu.contains(e.target)) fecharLista(); }, true);
+  function listaPesquisa(sel) {
+    if (sel._cs) return sel._cs;
+    var wrap = el("div", { class: "cs" }); sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(sel);
+    var btn = el("button", { type: "button", class: "cs-trigger", "aria-haspopup": "listbox", "aria-expanded": "false" });
+    if (sel.getAttribute("aria-label")) btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
+    if (sel.id) { btn.id = sel.id + "Btn"; var lb = document.querySelector('label[for="' + sel.id + '"]'); if (lb) lb.htmlFor = btn.id; }
+    var menu = el("ul", { class: "cs-menu", role: "listbox" }); menu.hidden = true;
+    var buscaLi = el("li", { class: "cs-search" }), busca = el("input", { type: "search", placeholder: "Digite para pesquisar…", autocomplete: "off", "aria-label": "Pesquisar" });
+    buscaLi.appendChild(busca);
+    (sel.closest("dialog") || document.body).appendChild(menu);
+    wrap.appendChild(btn);
+    var vis = [], ativo = -1, termo = "";
+    function opcoes() { return [].filter.call(sel.options, function (o) { return o.value !== "" || (sel.dataset.vazio !== undefined && o === sel.options[0]); }); }
+    function marcar(txt) {
+      var t = semAcento(termo).trim(); if (!t) return esc(txt);
+      var i = semAcento(txt).indexOf(t); if (i < 0) return esc(txt);
+      return esc(txt.slice(0, i)) + "<mark>" + esc(txt.slice(i, i + t.length)) + "</mark>" + esc(txt.slice(i + t.length));
+    }
+    function sync() {
+      var o = sel.options[sel.selectedIndex];
+      btn.innerHTML = (!o || o.value === "") ? '<span class="cs-label placeholder">' + esc(sel.options[0] ? sel.options[0].text : "Selecione…") + "</span>" + ICON_CHEV : '<span class="cs-label">' + esc(o.text) + "</span>" + ICON_CHEV;
+      btn.title = o && o.value ? o.text : "";
+    }
+    function setAtivo(i) { ativo = i; var lis = menu.querySelectorAll(".cs-option"); lis.forEach(function (li, j) { li.classList.toggle("active", j === i); }); if (lis[i]) lis[i].scrollIntoView({ block: "nearest" }); }
+    function escolher(o) { sel.value = o.value; sel.dispatchEvent(new Event("change", { bubbles: true })); fecharLista(); btn.focus(); }
+    function montar() {
+      [].slice.call(menu.children).forEach(function (li) { if (li !== buscaLi) li.remove(); });
+      if (!buscaLi.parentNode) menu.appendChild(buscaLi);
+      var t = semAcento(termo).trim(), todas = opcoes();
+      vis = todas.filter(function (o) { return !t || semAcento(o.text).indexOf(t) >= 0 || semAcento(o.value).indexOf(t) >= 0; });
+      if (t && vis.length) menu.appendChild(el("li", { class: "cs-count" }, vis.length + " de " + todas.length));
+      if (!vis.length) menu.appendChild(el("li", { class: "cs-empty" }, todas.length ? 'Nenhum resultado para "' + esc(termo) + '"' : "Sem opções"));
+      vis.forEach(function (o, i) {
+        var li = el("li", { class: "cs-option" + (o.selected ? " selected" : ""), role: "option" }, '<span class="cs-label">' + marcar(o.text) + "</span>" + ICON_CHECK);
+        li.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        li.addEventListener("click", function () { escolher(o); });
+        li.addEventListener("mousemove", function () { if (ativo !== i) setAtivo(i); });
+        menu.appendChild(li);
+      });
+    }
+    function posicionar() {
+      var r = btn.getBoundingClientRect(), h = Math.min(280, menu.scrollHeight || 280);
+      var baixo = window.innerHeight - r.bottom, cima = r.top;
+      menu.style.left = r.left + "px"; menu.style.width = Math.max(r.width, 220) + "px";
+      if (baixo < h + 12 && cima > baixo) { menu.style.top = ""; menu.style.bottom = (window.innerHeight - r.top + 6) + "px"; }
+      else { menu.style.bottom = ""; menu.style.top = (r.bottom + 6) + "px"; }
+    }
+    function abrirLista(inicial) {
+      if (aberto && aberto.menu === menu) return fecharLista();
+      fecharLista();
+      termo = typeof inicial === "string" ? inicial : ""; busca.value = termo;
+      montar(); menu.hidden = false; posicionar();
+      wrap.classList.add("is-open"); btn.setAttribute("aria-expanded", "true");
+      aberto = { wrap: wrap, menu: menu, btn: btn };
+      var idx = vis.findIndex(function (o) { return o.selected; }); setAtivo(idx < 0 ? 0 : idx);
+      busca.focus();
+    }
+    btn.addEventListener("click", function () { abrirLista(); });
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") { e.preventDefault(); abrirLista(); }
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== " ") { e.preventDefault(); abrirLista(e.key); }
+    });
+    busca.addEventListener("input", function () { termo = busca.value; montar(); posicionar(); setAtivo(vis.length ? 0 : -1); });
+    busca.addEventListener("keydown", function (e) {
+      var n = vis.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (n) setAtivo((ativo + (e.key === "ArrowDown" ? 1 : -1) + n) % n); }
+      else if (e.key === "Enter") { e.preventDefault(); if (vis[ativo]) escolher(vis[ativo]); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fecharLista(); btn.focus(); }
+      else if (e.key === "Tab") fecharLista();
+    });
+    sel.addEventListener("change", sync);
+    sync();
+    sel._cs = { btn: btn, sync: sync, remover: function () { menu.remove(); } };
+    return sel._cs;
+  }
+  function invalido(sel, on) { var c = sel._cs; (c ? c.btn : sel).classList.toggle("invalid", !!on); }
+
+  // ===== Distribuição de cada nota: { cod: valor em centavos } =====
+  function partes(n) {
+    var tot = centavos(n.valor);
+    var div = n.tipo === "cc" ? [{ cod: n.cc, pct: 100 }] : (n.div || []);
+    var vals = dividir(tot, div.map(function (d) { return d.pct; }));
+    return div.map(function (d, i) { return { cod: d.cod, pct: d.pct, v: vals[i] }; });
+  }
+
+  // ===== Render =====
+  function render() {
+    // Notas
+    var tb = $("tbNotas"); tb.innerHTML = "";
+    if (!notas.length) tb.innerHTML = '<tr><td colspan="5" class="vazio"><b>Nenhuma nota lançada</b>Clique em “Adicionar nota” para começar.</td></tr>';
+    var totalInt = 0, q = semAcento($("qNotas").value).trim(), fD = $("fDestino").value, fC = $("fCC").value, mostradas = 0;
+    notas.forEach(function (n) { totalInt += centavos(n.valor); });
+    notas.forEach(function (n, i) {
+      var cods = n.tipo === "cc" ? [n.cc] : (n.div || []).map(function (d) { return d.cod; });
+      if (fD && n.tipo !== fD) return;
+      if (fC && cods.indexOf(fC) < 0) return;
+      if (q && semAcento([n.num, n.desc, n.modelo, cods.join(" "), cods.map(descCC).join(" ")].join(" ")).indexOf(q) < 0) return;
+      mostradas++;
+      var dest;
+      if (n.tipo === "cc") dest = '<span class="tag">Centro único</span><div class="detalhe">' + esc(rotCC(n.cc)) + "</div>";
+      else {
+        dest = (n.tipo === "modelo" ? '<span class="tag modelo">Rateio · ' + esc(n.modelo) + "</span>" : '<span class="tag pers">Rateio personalizado</span>') +
+          '<div class="detalhe">' + partes(n).map(function (p) { return esc(descCC(p.cod)) + " " + P(p.pct) + " = " + R(p.v / 100); }).join("<br>") + "</div>";
+      }
+      var tr = el("tr");
+      tr.innerHTML = '<td class="muted">' + (i + 1) + "</td>" +
+        "<td><b>NF " + esc(n.num) + "</b>" + (n.desc ? '<div class="detalhe">' + esc(n.desc) + "</div>" : "") + "</td>" +
+        "<td>" + dest + "</td>" +
+        '<td class="num">' + R(n.valor) + "</td>" +
+        '<td class="ac"><div class="acoes"><button class="ibtn" data-ed="' + i + '" title="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' +
+        '<button class="ibtn del" data-del="' + i + '" title="Excluir"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg></button></div></td>';
+      tb.appendChild(tr);
+    });
+    if (notas.length && !mostradas) tb.innerHTML = '<tr><td colspan="5" class="vazio"><b>Nenhuma nota encontrada</b>Ajuste a busca ou os filtros.</td></tr>';
+    $("fNotas").textContent = R(totalInt / 100);
+    // filtro de CC: só os centros usados nas notas
+    var usados = {}; notas.forEach(function (n) { (n.tipo === "cc" ? [n.cc] : n.div.map(function (d) { return d.cod; })).forEach(function (c) { usados[c] = 1; }); });
+    var fcc = $("fCC"), atual = fcc.value;
+    fcc.innerHTML = '<option value="">Todos os centros de custo</option>' + Object.keys(usados).sort().map(function (c) { return '<option value="' + c + '"' + (c === atual ? " selected" : "") + ">" + esc(rotCC(c)) + "</option>"; }).join("");
+    if (fcc.value !== atual) fcc.value = "";
+    listaPesquisa(fcc).sync();
+
+    // Soma por centro de custo
+    var mapa = {};
+    notas.forEach(function (n) { partes(n).forEach(function (p) { mapa[p.cod] = (mapa[p.cod] || 0) + p.v; }); });
+    var cods = Object.keys(mapa).filter(function (c) { return mapa[c] > 0; }).sort(function (a, b) { return mapa[b] - mapa[a]; });
+    // % com 2 casas (em centésimos de %) fechando 10000 = 100,00%
+    var pcts = dividir(10000, cods.map(function (c) { return mapa[c]; }));
+    // Conferência: total × % arredondado (o que a solicitação calcula ao vincular a NF)
+    var tbR = $("tbRes"); tbR.innerHTML = "";
+    var somaConf = 0, maxDif = 0;
+    if (!cods.length) tbR.innerHTML = '<tr><td colspan="4" class="vazio"><b>Sem rateio ainda</b>O resultado aparece aqui conforme as notas são lançadas.</td></tr>';
+    cods.forEach(function (c, i) {
+      var conf = Math.round(totalInt * pcts[i] / 10000); somaConf += conf;
+      var d = conf - mapa[c]; maxDif = Math.max(maxDif, Math.abs(d));
+      var tr = el("tr");
+      tr.innerHTML = "<td><b>" + esc(c) + "</b> · " + esc(descCC(c)) + "</td>" +
+        '<td class="num">' + R(mapa[c] / 100) + "</td>" +
+        '<td class="num"><div class="pct"><div class="bar"><i style="width:' + (pcts[i] / 100) + '%"></i></div><b>' + P(pcts[i] / 100) + "</b></div></td>" +
+        '<td class="num">' + R(conf / 100) + '<div class="dif ' + (d ? "nz" : "zero") + '">' + (d ? (d > 0 ? "+" : "−") + R(Math.abs(d) / 100) : "sem diferença") + "</div></td>";
+      tbR.appendChild(tr);
+    });
+    $("fResV").textContent = R(totalInt / 100);
+    $("fResP").textContent = cods.length ? "100,00%" : "0,00%";
+    $("fResC").textContent = R(somaConf / 100);
+    var av = $("avisoDif");
+    av.hidden = !maxDif;
+    if (maxDif) av.textContent = "Atenção: com o % arredondado em 2 casas, o sistema vai recalcular cada centro com diferença de até " + R(maxDif / 100) + " (coluna Conferência). Isso vem só do arredondamento do percentual.";
+
+    // KPIs
+    $("kTotal").textContent = R(totalInt / 100);
+    $("kNotas").textContent = String(notas.length);
+    $("kCC").textContent = String(cods.length);
+    $("kPct").textContent = cods.length ? "100,00%" : "0,00%";
+    $("kPctBox").className = "kpi" + (cods.length ? " ok" : "");
+    window.__RES = cods.map(function (c, i) { return { cod: c, desc: descCC(c), valor: mapa[c] / 100, pct: pcts[i] / 100 }; });
+  }
+
+  // ===== Dialog de nota =====
+  var editando = -1;
+  function opcoesCC(sel, atual) {
+    sel.innerHTML = '<option value="">Selecione o centro de custo…</option>' + CC.map(function (c) { return '<option value="' + c.cod + '"' + (c.cod === atual ? " selected" : "") + ">" + esc(c.cod + " · " + c.desc) + "</option>"; }).join("");
+    listaPesquisa(sel).sync();
+  }
+  function opcoesModelo(atual) {
+    var nomes = Object.keys(MODELOS).sort();
+    $("nModelo").innerHTML = '<option value="">' + (nomes.length ? "Selecione o rateio…" : "Nenhum rateio pré-definido cadastrado") + "</option>" +
+      nomes.map(function (n) { return '<option value="' + esc(n) + '"' + (n === atual ? " selected" : "") + ">" + esc(n) + " (" + MODELOS[n].length + " centros)</option>"; }).join("");
+    listaPesquisa($("nModelo")).sync();
+  }
+  function tipoAtual() { return document.querySelector('input[name="tipo"]:checked').value; }
+  function mostrarTipo() {
+    var t = tipoAtual();
+    $("boxCC").hidden = t !== "cc"; $("boxModelo").hidden = t !== "modelo"; $("boxPers").hidden = t !== "pers";
+    if (t === "pers" && !$("persRows").children.length) { linhaPers("", ""); linhaPers("", ""); }
+    previa();
+  }
+  function linhaPers(cod, pct) {
+    var row = el("div", { class: "pers-row" });
+    var s = el("select", { class: "pCC", "aria-label": "Centro de custo" });
+    var w = el("div", { class: "iw has-suf" }, '<input class="pPct" inputmode="decimal" placeholder="0,00" autocomplete="off" aria-label="Percentual"><span class="suf">%</span>');
+    w.querySelector("input").value = pct === "" || pct == null ? "" : n2.format(pct);
+    var b = el("button", { type: "button", class: "ibtn del", title: "Remover" }, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>');
+    b.onclick = function () { if ($("persRows").children.length > 1) { if (s._cs) s._cs.remover(); row.remove(); previa(); } };
+    row.append(s, w, b); $("persRows").appendChild(row);
+    opcoesCC(s, cod);
+  }
+  function divisaoForm() {
+    var t = tipoAtual();
+    if (t === "cc") return $("nCC").value ? [{ cod: $("nCC").value, pct: 100 }] : [];
+    if (t === "modelo") return (MODELOS[$("nModelo").value] || []).map(function (x) { return { cod: x.cod, pct: x.pct }; });
+    return [].map.call($("persRows").children, function (r) { return { cod: r.querySelector(".pCC").value, pct: lerNum(r.querySelector(".pPct").value) || 0 }; });
+  }
+  function previa() {
+    var t = tipoAtual(), div = divisaoForm(), v = lerNum($("nValor").value) || 0;
+    if (t === "pers") {
+      var s = Math.round(div.reduce(function (a, d) { return a + d.pct; }, 0) * 100) / 100;
+      $("persTot").textContent = "Total: " + P(s); $("persTot").className = "tot " + (s === 100 ? "ok" : "bad");
+    }
+    if (t === "modelo") $("modeloHint").textContent = div.length ? div.map(function (d) { return descCC(d.cod) + " " + P(d.pct); }).join(" · ") : "";
+    var pv = $("previa");
+    var ok = div.length > 1 && v > 0 && div.every(function (d) { return d.cod; });
+    pv.hidden = !ok;
+    if (ok) {
+      var vals = dividir(centavos(v), div.map(function (d) { return d.pct; }));
+      pv.innerHTML = "<div><b>Prévia da divisão desta nota</b><span></span></div>" + div.map(function (d, i) { return "<div><span>" + esc(rotCC(d.cod)) + " · " + P(d.pct) + "</span><b>" + R(vals[i] / 100) + "</b></div>"; }).join("");
+    }
+  }
+  function abrir(i) {
+    editando = i;
+    var n = i >= 0 ? notas[i] : { num: "", desc: "", valor: null, tipo: "cc", cc: "", modelo: "", div: [] };
+    $("dlgTitulo").textContent = i >= 0 ? "Editar nota" : "Adicionar nota";
+    $("btnSalvarNota").textContent = i >= 0 ? "Salvar" : "Adicionar";
+    $("nNum").value = n.num; $("nDesc").value = n.desc || "";
+    $("nValor").value = n.valor == null ? "" : n2.format(n.valor);
+    document.querySelector('input[name="tipo"][value="' + n.tipo + '"]').checked = true;
+    opcoesCC($("nCC"), n.cc); opcoesModelo(n.modelo);
+    [].forEach.call($("persRows").querySelectorAll("select"), function (x) { if (x._cs) x._cs.remover(); });
+    $("persRows").innerHTML = "";
+    if (n.tipo === "pers") n.div.forEach(function (d) { linhaPers(d.cod, d.pct); });
+    document.querySelectorAll("#fNota .invalid").forEach(function (x) { x.classList.remove("invalid"); });
+    mostrarTipo();
+    $("dlgNota").showModal(); $("nNum").focus();
+  }
+  $("btnNova").onclick = function () { abrir(-1); };
+  listaPesquisa($("fDestino")); listaPesquisa($("fCC"));
+  $("qNotas").addEventListener("input", render);
+  $("fDestino").addEventListener("change", render);
+  $("fCC").addEventListener("change", render);
+  document.querySelectorAll('input[name="tipo"]').forEach(function (r) { r.onchange = mostrarTipo; });
+  $("nModelo").onchange = function () { invalido($("nModelo"), 0); previa(); };
+  $("persAdd").onclick = function () { linhaPers("", ""); };
+  $("persIgual").onclick = function () {
+    var rows = $("persRows").children, n = rows.length, partes = dividir(10000, [].map.call(rows, function () { return 1; }));
+    [].forEach.call(rows, function (r, i) { r.querySelector(".pPct").value = n2.format(partes[i] / 100); });
+    previa();
+  };
+  $("persRows").addEventListener("input", previa);
+  $("persRows").addEventListener("change", function (e) { if (e.target.tagName === "SELECT") invalido(e.target, 0); previa(); });
+  $("persRows").addEventListener("focusout", function (e) { if (e.target.classList.contains("pPct") && e.target.value) { var v = lerNum(e.target.value); e.target.value = v == null ? "" : n2.format(v); previa(); } });
+  // Máscara de moeda
+  $("nValor").addEventListener("input", function () { var d = this.value.replace(/\D/g, ""); this.value = d ? n2.format(Number(d) / 100) : ""; previa(); });
+  $("nCC").onchange = function () { invalido($("nCC"), 0); previa(); };
+  document.querySelectorAll("[data-fechar]").forEach(function (b) { b.onclick = function () { fecharLista(); b.closest("dialog").close(); }; });
+  $("dlgNota").addEventListener("close", fecharLista);
+  $("dlgNota").addEventListener("cancel", function (e) { if (aberto) { e.preventDefault(); fecharLista(); } });
+
+  $("fNota").addEventListener("submit", function (e) {
+    e.preventDefault();
+    document.querySelectorAll("#fNota .invalid").forEach(function (x) { x.classList.remove("invalid"); });
+    var num = $("nNum").value.trim(), valor = lerNum($("nValor").value), t = tipoAtual(), div = divisaoForm(), erro = "";
+    if (!num) { $("nNum").classList.add("invalid"); erro = "Informe o número da nota."; }
+    if (!valor || valor <= 0) { $("nValor").classList.add("invalid"); erro = erro || "Informe o valor da nota."; }
+    if (t === "cc" && !$("nCC").value) { invalido($("nCC"), 1); erro = erro || "Selecione o centro de custo."; }
+    if (t === "modelo" && !div.length) { invalido($("nModelo"), 1); erro = erro || "Selecione o rateio pré-definido."; }
+    if (t === "pers") {
+      var vistos = {};
+      [].forEach.call($("persRows").children, function (r) {
+        var s = r.querySelector(".pCC"), p = r.querySelector(".pPct");
+        if (!s.value || vistos[s.value]) { invalido(s, 1); erro = erro || (s.value ? "Centro de custo repetido." : "Selecione o centro de custo de todas as linhas."); }
+        vistos[s.value] = 1;
+        if (!(lerNum(p.value) > 0)) { p.classList.add("invalid"); erro = erro || "Informe o % de todas as linhas."; }
+      });
+      var soma = Math.round(div.reduce(function (a, d) { return a + d.pct; }, 0) * 100) / 100;
+      if (!erro && soma !== 100) erro = "A divisão personalizada precisa somar 100% (atual: " + P(soma) + ").";
+    }
+    if (erro) return toast("Verifique os campos", erro);
+    var n = { num: num, desc: $("nDesc").value.trim(), valor: valor, tipo: t, cc: t === "cc" ? $("nCC").value : "", modelo: t === "modelo" ? $("nModelo").value : "", div: t === "cc" ? [] : div };
+    if (editando >= 0) notas[editando] = n; else notas.push(n);
+    salvar(); $("dlgNota").close(); render();
+    toast(editando >= 0 ? "Nota atualizada" : "Nota adicionada", "NF " + num + " · " + R(valor));
+  });
+
+  $("tbNotas").addEventListener("click", function (e) {
+    var ed = e.target.closest("[data-ed]"), dl = e.target.closest("[data-del]");
+    if (ed) abrir(+ed.dataset.ed);
+    if (dl) { var i = +dl.dataset.del, n = notas[i];
+      confirmar("Excluir NF " + n.num + "?", R(n.valor) + " sai do cálculo do rateio.", function () { notas.splice(i, 1); salvar(); render(); toast("Nota excluída", "NF " + n.num); }); }
+  });
+  $("btnLimpar").onclick = function () {
+    if (!notas.length) return toast("Nada para limpar", "");
+    confirmar("Limpar todas as notas?", "As " + notas.length + " notas (" + $("kTotal").textContent + ") saem da calculadora.", function () { notas = []; salvar(); render(); toast("Calculadora limpa", ""); });
+  };
+
+  // ===== Confirmação em 2 etapas =====
+  var cfFn = null, cfEtapa = 1, cfMsg2 = "";
+  function confirmar(tit, msg, fn) {
+    cfFn = fn; cfEtapa = 1;
+    $("cfStep").textContent = "Etapa 1 de 2"; $("cfTit").textContent = tit; $("cfMsg").textContent = msg; $("cfSim").textContent = "Continuar";
+    $("dlgCf").showModal(); $("cfNao").focus();
+  }
+  $("cfSim").onclick = function () {
+    if (cfEtapa === 1) { cfEtapa = 2; $("cfStep").textContent = "Etapa 2 de 2"; $("cfTit").textContent = "Tem certeza?"; $("cfMsg").textContent = "Esta ação não poderá ser desfeita."; $("cfSim").textContent = "Sim, excluir"; return; }
+    var f = cfFn; cfFn = null; $("dlgCf").close(); f && f();
+  };
+  $("cfNao").onclick = function () { cfFn = null; $("dlgCf").close(); };
+
+  // ===== Saídas =====
+  $("btnCopiar").onclick = function () {
+    var r = window.__RES || []; if (!r.length) return toast("Nada para copiar", "Lance pelo menos uma nota.");
+    var txt = ["Centro de custo\tDescrição\tValor\tPercentual"].concat(r.map(function (x) { return x.cod + "\t" + x.desc + "\t" + n2.format(x.valor) + "\t" + n2.format(x.pct) + "%"; })).join("\n");
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(
+      function () { toast("Rateio copiado", "Cole no Excel ou use para preencher o Fluig."); },
+      function () { prompt("Copie o rateio:", txt); });
+  };
+  $("btnCsv").onclick = function () {
+    var r = window.__RES || []; if (!r.length) return toast("Nada para exportar", "");
+    var lin = [["Centro de custo", "Descrição", "Valor", "Percentual"]].concat(r.map(function (x) { return [x.cod, x.desc, n2.format(x.valor), n2.format(x.pct) + "%"]; }))
+      .concat([["", "TOTAL", $("fResV").textContent.replace("R$", "").trim(), "100,00%"]]);
+    lin.push([]); lin.push(["Notas"]); notas.forEach(function (n) { lin.push(["NF " + n.num, n.desc, n2.format(n.valor), n.tipo === "cc" ? n.cc : (n.tipo === "modelo" ? "Rateio " + n.modelo : "Personalizado")]); });
+    var csv = lin.map(function (l) { return l.map(function (c) { return '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"'; }).join(";"); }).join("\r\n");
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" })); a.download = "rateio.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  // Relatório próprio para impressão / PDF (não imprime a tela)
+  function montarRelatorio() {
+    var r = window.__RES || [], tot = r.reduce(function (a, x) { return a + Math.round(x.valor * 100); }, 0);
+    var agora = new Date(), dt = agora.toLocaleDateString("pt-BR") + " " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    var linhasRes = r.map(function (x) {
+      var conf = Math.round(tot * Math.round(x.pct * 100) / 10000), d = conf - Math.round(x.valor * 100);
+      return "<tr><td class='cod'>" + esc(x.cod) + "</td><td>" + esc(x.desc) + "</td><td class='num'>" + R(x.valor) + "</td>" +
+        "<td class='num'><span class='barra'><i style='width:" + x.pct + "%'></i></span><span class='pct-b'>" + P(x.pct) + "</span></td>" +
+        "<td class='num'>" + R(conf / 100) + (d ? "<div class='dif'>" + (d > 0 ? "+" : "−") + R(Math.abs(d) / 100) + "</div>" : "") + "</td></tr>";
+    }).join("");
+    var linhasNotas = notas.map(function (n, i) {
+      var dest = n.tipo === "cc" ? "<span class='tag'>Centro único</span><div class='sub'>" + esc(rotCC(n.cc)) + "</div>"
+        : "<span class='tag'>" + (n.tipo === "modelo" ? "Rateio · " + esc(n.modelo) : "Rateio personalizado") + "</span><div class='sub'>" +
+          partes(n).map(function (p) { return esc(p.cod + " " + descCC(p.cod)) + " · " + P(p.pct) + " = " + R(p.v / 100); }).join("<br>") + "</div>";
+      return "<tr><td>" + (i + 1) + "</td><td><b>NF " + esc(n.num) + "</b>" + (n.desc ? "<div class='sub'>" + esc(n.desc) + "</div>" : "") + "</td><td>" + dest + "</td><td class='num'>" + R(n.valor) + "</td></tr>";
+    }).join("");
+    $("relatorio").innerHTML =
+      "<div class='rl-topo'><div><div class='org'>TRC Agroflorestal · Compras</div><h1>Rateio de centros de custo</h1></div><div class='meta'>Emitido em " + dt + "<br>" + notas.length + " nota(s) · " + r.length + " centro(s) de custo</div></div>" +
+      "<div class='rl-kpis'><div><span>Valor total</span><b>" + R(tot / 100) + "</b></div><div><span>Notas</span><b>" + notas.length + "</b></div><div><span>Centros de custo</span><b>" + r.length + "</b></div><div><span>Soma dos %</span><b>" + (r.length ? "100,00%" : "0,00%") + "</b></div></div>" +
+      "<h2>Rateio final <small>percentuais para lançar no Fluig</small></h2>" +
+      "<table><thead><tr><th>C.C</th><th>Descrição</th><th class='num'>Valor somado</th><th class='num'>Percentual</th><th class='num'>Conferência*</th></tr></thead><tbody>" + linhasRes + "</tbody>" +
+      "<tfoot><tr><td></td><td>Total</td><td class='num'>" + R(tot / 100) + "</td><td class='num'>100,00%</td><td class='num'>" + $("fResC").textContent + "</td></tr></tfoot></table>" +
+      "<div class='rl-nota'>* Conferência = valor total × percentual arredondado (2 casas), que é o que o sistema calcula ao lançar a NF. A diferença indicada vem só do arredondamento do percentual.</div>" +
+      "<h2>Notas consideradas <small>origem dos valores</small></h2>" +
+      "<table><thead><tr><th style='width:26px'>#</th><th>Nota</th><th>Destino</th><th class='num'>Valor</th></tr></thead><tbody>" + linhasNotas + "</tbody>" +
+      "<tfoot><tr><td></td><td>Total geral</td><td></td><td class='num'>" + R(tot / 100) + "</td></tr></tfoot></table>" +
+      "<div class='rl-assin'><div>Elaborado por</div><div>Conferido por</div></div>" +
+      "<div class='rl-rodape'>Calculadora de Rateio · Compras TRC</div>";
+  }
+  $("btnImprimir").onclick = function () {
+    if (!notas.length) return toast("Nada para imprimir", "Lance pelo menos uma nota.");
+    fecharLista(); montarRelatorio(); window.print();
+  };
+  window.addEventListener("beforeprint", function () { if (notas.length) montarRelatorio(); });
+
+  // ===== Carrega centros de custo e rateios pré-definidos da planilha =====
+  render();
+  fetch(URL_LISTAS, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    var cc = (j.tbListaCentroCusto || []).map(function (l) { return { cod: String(l["Código"] || "").trim(), desc: String(l["Descrição"] || "").trim() }; }).filter(function (c) { return c.cod; });
+    if (cc.length) CC = cc.sort(function (a, b) { return a.cod.localeCompare(b.cod); });
+    MODELOS = {};
+    (j.tbListaModeloRateio || []).forEach(function (l) {
+      var nome = String(l.Modelo || "").trim(); if (!nome) return;
+      var p = parseFloat(String(l.Percentual || "").replace(",", ".")) || 0; if (p <= 1) p = p * 100;
+      (MODELOS[nome] = MODELOS[nome] || []).push({ cod: String(l.CentroCusto || "").trim(), pct: Math.round(p * 100) / 100 });
+    });
+    $("fonteDados").textContent = "Centros de custo e rateios da planilha Compras TRC (" + CC.length + " CCs · " + Object.keys(MODELOS).length + " rateios)";
+    render();
+  }).catch(function () {
+    $("fonteDados").textContent = "Planilha indisponível: usando a lista padrão de centros de custo";
+  });
+})();
+</script>
+</body>
+</html>
