@@ -223,16 +223,6 @@
 let APPS = [
   { nome:"Gestão de Compras", desc:"Solicitações de compra, dashboard e cadastros.", cat:"Operações", cor:"#f97316", icon:"cart", url:"compras-trc.html", webhook:"", status:"on"  },
   { nome:"Calculadora de Rateio", desc:"Soma as notas por centro de custo e monta o rateio em 100% para o Fluig.", cat:"Operações", cor:"#0ea5a4", icon:"percent", url:"rateio-trc.html", webhook:"", status:"on"  },
-  { nome:"Relatórios",       desc:"Geração automática de relatórios em PDF/Excel.", cat:"Dados",         cor:"#2f6fed", icon:"chart",    url:"relatorios.html",  webhook:"", status:"on"  },
-  { nome:"Envio de E-mails", desc:"Disparo programado de e-mails e alertas.",       cat:"Comunicação",   cor:"#e9445a", icon:"mail",     url:"emails.html",      webhook:"", status:"on"  },
-  { nome:"Planilhas",        desc:"Consolidação e limpeza de planilhas.",           cat:"Dados",         cor:"#16a34a", icon:"table",    url:"planilhas.html",   webhook:"", status:"on"  },
-  { nome:"Agenda",           desc:"Sincronização de calendário e lembretes.",       cat:"Produtividade", cor:"#8b5cf6", icon:"calendar", url:"agenda.html",      webhook:"", status:"dev" },
-  { nome:"Estoque",          desc:"Controle e alertas de nível de estoque.",        cat:"Operações",     cor:"#f59e0b", icon:"box",      url:"estoque.html",     webhook:"", status:"on"  },
-  { nome:"WhatsApp Bot",     desc:"Respostas automáticas e notificações.",          cat:"Comunicação",   cor:"#22c55e", icon:"chat",     url:"whatsapp.html",    webhook:"", status:"dev" },
-  { nome:"Financeiro",       desc:"Conciliação de contas e fluxo de caixa.",        cat:"Operações",     cor:"#0ea5e9", icon:"money",    url:"financeiro.html",  webhook:"", status:"on"  },
-  { nome:"Documentos",       desc:"Organização e renomeação de arquivos.",          cat:"Produtividade", cor:"#64748b", icon:"file",     url:"documentos.html",  webhook:"", status:"on"  },
-  { nome:"Integrações API",  desc:"Conexões entre sistemas via API.",               cat:"Sistemas",      cor:"#ec4899", icon:"plug",     url:"integracoes.html", webhook:"", status:"dev" },
-  { nome:"Configurações",    desc:"Parâmetros gerais das automações.",              cat:"Sistemas",      cor:"#475569", icon:"gear",     url:"config.html",      webhook:"", status:"off" },
 ].map((a,i)=>({id:i+1,...a}));
 let nextId = APPS.length + 1;
 
